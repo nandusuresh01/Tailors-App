@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:project/Home.dart';
-import 'package:project/manage_login.dart';
-
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,7 +24,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: ManageLogin()
+      home: Tail()
     );
   }
 }

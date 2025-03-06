@@ -27,6 +27,39 @@ class _ManagecategoryState extends State<Managecategory> {
     }
   }
 
+  List<Map<String, dynamic>> category = [];
+
+  Future<void> fetchCategory() async {
+    try {
+      final response = await supabase.from('tbl_category').select();
+     setState(() {
+       category = response;
+     });
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+     Future<void> delete(int id) async {
+    try {
+      await supabase.from('tbl_category').delete().eq('category_id', id);
+     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Deleted")));{
+       fetchCategory();
+     };
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    fetchCategory();
+  }
+
   
   @override
   Widget build(BuildContext context) {
@@ -52,7 +85,26 @@ class _ManagecategoryState extends State<Managecategory> {
         ),
         Center(child: ElevatedButton(onPressed: (){
           insert();
-        }, child: Text("Submit")))
+        }, child: Text("Submit"))),
+        SizedBox(
+          height: 20,
+        ),
+        ListView.builder(
+          itemCount: category.length,
+          shrinkWrap: true,
+          itemBuilder: (context, index) {
+            final data = category[index];
+          return ListTile(
+            leading: Text((index + 1).toString()),
+            title: Text(data['category_name']),
+            trailing: IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: (){
+                delete(data['category_id']);
+              },
+            ),
+          );
+        },)
       ],
      ),
     );
