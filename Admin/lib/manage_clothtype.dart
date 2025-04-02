@@ -44,7 +44,7 @@ class _ManageclothtypeState extends State<Manageclothtype> {
 
   Future<void> delete(int id) async {
     try {
-      await supabase.from('tbl_clothtype').delete().eq('id',id);
+      await supabase.from('tbl_clothtype').delete().eq('clothtype_id',id);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Deleted")));
                 fetchclothtype();
     } catch (e) {

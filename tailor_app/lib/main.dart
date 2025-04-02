@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tailor_app/home.dart';
 import 'package:tailor_app/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,11 +21,29 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Tailor App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: Login(),
+      home: AuthWrapper(),
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Check if the user is logged in
+    final session = supabase.auth.currentSession;
+
+    // Navigate to the appropriate screen based on the authentication state
+    if (session != null) {
+      return HomePage(); // Replace with your home screen widget
+    } else {
+      return Login(); // Replace with your auth page widget
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:project/manage_clothtype.dart';
 import 'package:project/manage_complaint.dart';
 import 'package:project/manage_district.dart';
 import 'package:project/manage_place.dart';
+import 'package:project/manage_tailors.dart';
 
 
 class Tail extends StatelessWidget {
@@ -98,5 +99,6 @@ final List<Map<String, dynamic>> options = [
   {'title': 'Manage Category', 'page': Managecategory(), 'color': Colors.green, 'icon': Icons.category},
   {'title': 'Manage Attribute', 'page': ManageAttribute(), 'color': Colors.purple, 'icon': Icons.settings},
   {'title': 'Manage Place', 'page': ManagePlace(), 'color': Colors.teal, 'icon': Icons.place},
-  {'title': 'Manage Complaint', 'page': Managecomplaint(), 'color': Colors.red, 'icon': Icons.report_problem},
+  {'title': 'Manage Complaint', 'page': AdminComplaintsPage(), 'color': Colors.red, 'icon': Icons.report_problem},
+  {'title': 'Manage Tailors', 'page': AdminTailors(), 'color': Colors.red, 'icon': Icons.report_problem},
 ];
