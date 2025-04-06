@@ -48,7 +48,7 @@ class _UserProfileBookingPageState extends State<UserProfileBookingPage> {
       case 3:
         return 'Rejected';
       case 4:
-        return 'Completed';
+        return 'Payment Completed';
       case 5:
         return 'Delivered';
       default:

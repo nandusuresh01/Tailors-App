@@ -66,7 +66,8 @@ class _SelectMaterialState extends State<SelectMaterial> {
       setState(() {
         attribute = response;
         if (widget.dress != null && selectedAttribute.isEmpty) {
-          final measurements = widget.dress!['tbl_measurement'] as List<dynamic>;
+          final measurements =
+              widget.dress!['tbl_measurement'] as List<dynamic>;
           selectedAttribute = measurements.map((m) {
             return {
               'attribute_id': m['attribute_id'],
@@ -256,12 +257,16 @@ class _SelectMaterialState extends State<SelectMaterial> {
           }
           print("Dress updated successfully.");
         } else {
-          final response = await supabase.from('tbl_dress').insert({
-            'material_id': selectedMaterial['material_id'],
-            'booking_id': bookingId,
-            'dress_remark': _remarkController.text,
-            'category_id': selectedCategory,
-          }).select().single();
+          final response = await supabase
+              .from('tbl_dress')
+              .insert({
+                'material_id': selectedMaterial['material_id'],
+                'booking_id': bookingId,
+                'dress_remark': _remarkController.text,
+                'category_id': selectedCategory,
+              })
+              .select()
+              .single();
 
           for (var attr in selectedAttribute) {
             await supabase.from('tbl_measurement').insert({
@@ -421,8 +426,9 @@ class _SelectMaterialState extends State<SelectMaterial> {
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Container(
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
                                       width: 60,
                                       height: 60,
                                       color: Colors.grey[300],
@@ -451,7 +457,8 @@ class _SelectMaterialState extends State<SelectMaterial> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                if (selectedMaterial['material_colors'] != null &&
+                                if (selectedMaterial['material_colors'] !=
+                                        null &&
                                     (selectedMaterial['material_colors']
                                             as List)
                                         .isNotEmpty) ...[
@@ -459,9 +466,10 @@ class _SelectMaterialState extends State<SelectMaterial> {
                                   Wrap(
                                     spacing: 6,
                                     runSpacing: 4,
-                                    children: (selectedMaterial['material_colors']
-                                            as List)
-                                        .map((color) {
+                                    children:
+                                        (selectedMaterial['material_colors']
+                                                as List)
+                                            .map((color) {
                                       return Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -566,11 +574,11 @@ class _SelectMaterialState extends State<SelectMaterial> {
         final attributeName = attribute[index]['attribute_name'];
         String initialValue = '';
         if (widget.dress != null) {
-          final existing = (widget.dress!['tbl_measurement'] as List<dynamic>)
-              .firstWhere(
-                (m) => m['attribute_id'] == attributeId,
-                orElse: () => {'measurement_value': ''},
-              );
+          final existing =
+              (widget.dress!['tbl_measurement'] as List<dynamic>).firstWhere(
+            (m) => m['attribute_id'] == attributeId,
+            orElse: () => {'measurement_value': ''},
+          );
           initialValue = existing['measurement_value'].toString();
         }
 

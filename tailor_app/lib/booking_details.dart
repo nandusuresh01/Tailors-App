@@ -26,7 +26,7 @@ class _BookingDetailsState extends State<BookingDetails> {
       final booking = await supabase
           .from('tbl_booking')
           .select(
-              "id, status, amount, tbl_dress(dress_id, dress_amount, dress_remark, tbl_material(material_amount, material_photo, material_colors, tbl_clothtype(clothtype_name)), tbl_measurement(*, tbl_attribute(attribute_name)), tbl_category(category_name))")
+              "id, status, amount, tracking_id, tbl_dress(dress_id, dress_amount, dress_remark, tbl_material(material_amount, material_photo, material_colors, tbl_clothtype(clothtype_name)), tbl_measurement(*, tbl_attribute(attribute_name)), tbl_category(category_name))")
           .eq('id', widget.booking)
           .maybeSingle()
           .limit(1);
@@ -72,14 +72,12 @@ class _BookingDetailsState extends State<BookingDetails> {
   }
 
   double getDressCost(Map<String, dynamic> dress) {
-    // Use dress_amount if available (after acceptance), otherwise calculate material cost
     return dress['dress_amount'] != null
         ? (dress['dress_amount'] as num).toDouble()
         : calculateDressMaterialCost(dress);
   }
 
   double calculateTotalCost() {
-    // Use booking amount if available (after acceptance), otherwise sum material costs
     if (bookingData != null && bookingData!['amount'] != null) {
       return (bookingData!['amount'] as num).toDouble();
     }
@@ -87,6 +85,211 @@ class _BookingDetailsState extends State<BookingDetails> {
       0.0,
       (sum, dress) => sum + calculateDressMaterialCost(dress),
     );
+  }
+
+  String getStatus(int status) {
+    switch (status) {
+      case 1:
+        return 'New Order';
+      case 2:
+        return 'Accepted';
+      case 3:
+        return 'Rejected';
+      case 4:
+        return 'Payment Completed';
+      case 5:
+        return 'Work Started';
+      case 6:
+        return 'Work Completed';
+      case 7:
+        return 'Delivered';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  Color getStatusColor(int status) {
+    switch (status) {
+      case 1:
+        return Colors.blue; // New Order
+      case 2:
+        return Colors.green; // Accepted
+      case 3:
+        return Colors.red; // Rejected
+      case 4:
+        return Colors.purple; // Payment Completed
+      case 5:
+        return Colors.orange; // Work Started
+      case 6:
+        return Colors.teal; // Work Completed
+      case 7:
+        return Colors.greenAccent; // Delivered
+      default:
+        return Colors.grey; // Unknown
+    }
+  }
+
+  void showChangeStatusDialog() {
+    if (bookingData == null || bookingData!['status'] == null) return;
+
+    int currentStatus = bookingData!['status'];
+    List<int> allowedStatuses = [];
+
+    // Define allowed next statuses based on current status
+    switch (currentStatus) {
+      case 2: // Accepted
+        allowedStatuses = [5]; // Can move to Work Started
+        break;
+      case 4: // Payment Completed
+        allowedStatuses = [5]; // Can move to Work Started
+        break;
+      case 5: // Work Started
+        allowedStatuses = [6]; // Can move to Work Completed
+        break;
+      case 6: // Work Completed
+        allowedStatuses = [7]; // Can move to Delivered
+        break;
+      default:
+        return; // No status change allowed for other statuses
+    }
+
+    if (allowedStatuses.isEmpty) return;
+
+    TextEditingController trackingIdController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            "Change Status",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Current Status: ${getStatus(currentStatus)}",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...allowedStatuses.map((status) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (status == 7 && trackingIdController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text("Please enter a tracking ID."),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              await updateStatus(status, status == 7 ? trackingIdController.text : null);
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: getStatusColor(status),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                            ),
+                            child: Text(
+                              "Set to ${getStatus(status)}",
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          if (status == 7) ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: trackingIdController,
+                              decoration: InputDecoration(
+                                labelText: "Tracking ID",
+                                labelStyle: TextStyle(color: primaryColor),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: accentColor, fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> updateStatus(int newStatus, String? trackingId) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      Map<String,dynamic> updateData = {'status': newStatus};
+      if (newStatus == 7 && trackingId != null && trackingId.isNotEmpty) {
+        updateData['tracking_id'] = trackingId; // Add tracking ID to update
+      }
+
+      await supabase
+          .from('tbl_booking')
+          .update(updateData).eq('id', widget.booking);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Status updated to ${getStatus(newStatus)}!"),
+          backgroundColor: primaryColor,
+        ),
+      );
+
+      await fetchBooking(); // Refresh data
+    } catch (e) {
+      print("Error updating status: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Failed to update status."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   void showAcceptOrderDialog() {
@@ -405,6 +608,7 @@ class _BookingDetailsState extends State<BookingDetails> {
           backgroundColor: Colors.red,
         ),
       );
+      await fetchBooking(); // Refresh data
     } catch (e) {
       print("Error rejecting order: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -444,6 +648,85 @@ class _BookingDetailsState extends State<BookingDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Display Status
+                  if (bookingData != null && bookingData!['status'] != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: getStatusColor(bookingData!['status'])
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: getStatusColor(bookingData!['status']),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        "Status: ${getStatus(bookingData!['status'])}",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: getStatusColor(bookingData!['status']),
+                        ),
+                      ),
+                    ),
+                  // Display Tracking ID
+                  if (bookingData != null &&
+                      bookingData!['status'] == 7 &&
+                      bookingData!['tracking_id'] != null &&
+                      bookingData!['tracking_id'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: primaryColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          "Tracking ID: ${bookingData!['tracking_id']}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  // Change Status Button
+                  if (bookingData != null &&
+                      (bookingData!['status'] == 2 ||
+                          bookingData!['status'] == 4 ||
+                          bookingData!['status'] == 5 ||
+                          bookingData!['status'] == 6))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: ElevatedButton.icon(
+                        onPressed: isLoading ? null : showChangeStatusDialog,
+                        icon: const Icon(
+                          Icons.update,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          "Change Status",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
                   dressData.isEmpty
                       ? Center(
                           child: Text(
@@ -718,60 +1001,59 @@ class _BookingDetailsState extends State<BookingDetails> {
                         ),
                       ),
                     ),
-                    bookingData!['status'] == 0
-                        ? Padding(
-                            padding: const EdgeInsets.all(15.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: isLoading
-                                        ? null
-                                        : showAcceptOrderDialog,
-                                    label: const Text(
-                                      "Accept Order",
-                                      style: TextStyle(color: Colors.green),
-                                    ),
-                                    icon: const Icon(Icons.check,
-                                        color: Colors.green),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
+                    if (bookingData != null && bookingData!['status'] == 0)
+                      Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : showAcceptOrderDialog,
+                                label: const Text(
+                                  "Accept Order",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                icon: const Icon(Icons.check,
+                                    color: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: isLoading
-                                        ? null
-                                        : () {
-                                            rejectOrder();
-                                          },
-                                    label: const Text(
-                                      "Reject Order",
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                    icon: const Icon(Icons.dangerous_outlined,
-                                        color: Colors.red),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          )
-                        : const SizedBox(),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                        rejectOrder();
+                                      },
+                                label: const Text(
+                                  "Reject Order",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                icon: const Icon(Icons.dangerous_outlined,
+                                    color: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ],
               ),

@@ -46,8 +46,12 @@ class _MyBookingState extends State<MyBooking> {
       case 3:
         return 'Rejected';
       case 4:
-        return 'Completed';
+        return 'Payment Completed';
       case 5:
+        return 'Work Started';
+      case 6:
+        return 'Work Completed';
+      case 7:
         return 'Delivered';
       default:
         return 'Unknown';
@@ -57,17 +61,21 @@ class _MyBookingState extends State<MyBooking> {
   Color getStatusColor(int status) {
     switch (status) {
       case 1:
-        return Colors.orange;
+        return Colors.blue; // New Order
       case 2:
-        return Colors.green;
+        return Colors.green; // Accepted
       case 3:
-        return Colors.redAccent;
+        return Colors.red; // Rejected
       case 4:
-        return Colors.blue;
+        return Colors.purple; // Payment Completed
       case 5:
-        return Colors.greenAccent;
+        return Colors.orange; // Work Started
+      case 6:
+        return Colors.teal; // Work Completed
+      case 7:
+        return Colors.greenAccent; // Delivered
       default:
-        return Colors.grey;
+        return Colors.grey; // Unknown
     }
   }
 

@@ -20,13 +20,37 @@ class _SearchTailorState extends State<SearchTailor> {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
-      final response = await supabase.from('tbl_tailor').select().eq('tailor_status', 1);
-      
+      // Fetch tailors with their average rating from tbl_rating
+      final response = await supabase
+          .from('tbl_tailor')
+          .select('''
+            *,
+            avg_rating: tbl_rating!tailor_id(
+              rating_count
+            )
+          ''')
+          .eq('tailor_status', 1);
+
       if (mounted) {
         setState(() {
-          tailors = List<Map<String, dynamic>>.from(response);
+          tailors = List<Map<String, dynamic>>.from(response).map((tailor) {
+            // Calculate the average rating for each tailor
+            final ratings = tailor['avg_rating'] as List<dynamic>? ?? [];
+            double averageRating = 0.0;
+            if (ratings.isNotEmpty) {
+              final totalRating = ratings.fold<double>(
+                  0.0,
+                  (sum, rating) =>
+                      sum + (rating['rating_count'] as num).toDouble());
+              averageRating = totalRating / ratings.length;
+            }
+            return {
+              ...tailor,
+              'average_rating': averageRating,
+            };
+          }).toList();
           filteredTailors = tailors;
           isLoading = false;
         });
@@ -37,7 +61,7 @@ class _SearchTailorState extends State<SearchTailor> {
           isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading tailors. Please try again."))
+          SnackBar(content: Text("Error loading tailors. Please try again.")),
         );
       }
       print("Error fetching tailors: $e");
@@ -52,10 +76,10 @@ class _SearchTailorState extends State<SearchTailor> {
 
   void _filterTailors(String query) {
     setState(() {
-     filteredTailors = tailors
-            .where((tailor) =>
-                tailor['tailor_name'].toLowerCase().contains(query.toLowerCase()))
-            .toList();
+      filteredTailors = tailors
+          .where((tailor) =>
+              tailor['tailor_name'].toLowerCase().contains(query.toLowerCase()))
+          .toList();
     });
   }
 
@@ -63,28 +87,28 @@ class _SearchTailorState extends State<SearchTailor> {
   Widget build(BuildContext context) {
     final primaryColor = Color(0xFF6A1B9A); // Deep purple for fashion theme
     final accentColor = Color(0xFFE91E63); // Pink accent
-    
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             // Custom App Bar
             _buildCustomAppBar(primaryColor),
-            
+
             // Main Content
             Expanded(
-              child: isLoading 
-                ? _buildLoadingState()
-                : filteredTailors.isEmpty 
-                  ? _buildEmptyState(primaryColor)
-                  : _buildTailorsList(primaryColor, accentColor),
+              child: isLoading
+                  ? _buildLoadingState()
+                  : filteredTailors.isEmpty
+                      ? _buildEmptyState(primaryColor)
+                      : _buildTailorsList(primaryColor, accentColor),
             ),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildCustomAppBar(Color primaryColor) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -118,9 +142,7 @@ class _SearchTailorState extends State<SearchTailor> {
               ),
             ],
           ),
-          
           SizedBox(height: 16),
-          
           // Search Bar
           Container(
             decoration: BoxDecoration(
@@ -159,7 +181,7 @@ class _SearchTailorState extends State<SearchTailor> {
       ),
     );
   }
-  
+
   Widget _buildLoadingState() {
     return Center(
       child: Column(
@@ -180,7 +202,7 @@ class _SearchTailorState extends State<SearchTailor> {
       ),
     );
   }
-  
+
   Widget _buildEmptyState(Color primaryColor) {
     return Center(
       child: Column(
@@ -231,7 +253,7 @@ class _SearchTailorState extends State<SearchTailor> {
       ),
     );
   }
-  
+
   Widget _buildTailorsList(Color primaryColor, Color accentColor) {
     return Padding(
       padding: EdgeInsets.all(16),
@@ -249,20 +271,19 @@ class _SearchTailorState extends State<SearchTailor> {
               ),
             ),
           ),
-          
           // Tailors List
           Expanded(
             child: ListView.builder(
               itemCount: filteredTailors.length,
               itemBuilder: (context, index) {
                 final data = filteredTailors[index];
-                // Get random rating for demo purposes (in real app, this would come from the database)
-                final rating = (3.5 + (index % 3) * 0.5);
-                
+                // Use the fetched average rating, default to 0.0 if null
+                final rating = (data['average_rating'] as double?)?.clamp(0.0, 5.0) ?? 0.0;
+
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
-                      context, 
+                      context,
                       MaterialPageRoute(
                         builder: (context) => TailorProfile(tailor: data['tailor_id']),
                       ),
@@ -297,14 +318,16 @@ class _SearchTailorState extends State<SearchTailor> {
                                   bottomLeft: Radius.circular(16),
                                 ),
                                 color: Colors.grey.shade200,
-                                image: data['tailor_photo'] != null && data['tailor_photo'].toString().isNotEmpty
+                                image: data['tailor_photo'] != null &&
+                                        data['tailor_photo'].toString().isNotEmpty
                                     ? DecorationImage(
                                         image: NetworkImage(data['tailor_photo']),
                                         fit: BoxFit.cover,
                                       )
                                     : null,
                               ),
-                              child: data['tailor_photo'] == null || data['tailor_photo'].toString().isEmpty
+                              child: data['tailor_photo'] == null ||
+                                      data['tailor_photo'].toString().isEmpty
                                   ? Center(
                                       child: Icon(
                                         Icons.person,
@@ -314,7 +337,6 @@ class _SearchTailorState extends State<SearchTailor> {
                                     )
                                   : null,
                             ),
-                            
                             // Tailor Info
                             Expanded(
                               child: Padding(
@@ -344,17 +366,15 @@ class _SearchTailorState extends State<SearchTailor> {
                                         ),
                                       ],
                                     ),
-                                    
                                     SizedBox(height: 4),
-                                    
                                     // Rating
                                     Row(
                                       children: [
                                         ...List.generate(5, (i) {
                                           return Icon(
-                                            i < rating.floor() 
-                                                ? Icons.star 
-                                                : i < rating 
+                                            i < rating.floor()
+                                                ? Icons.star
+                                                : i == rating.floor() && rating % 1 != 0
                                                     ? Icons.star_half
                                                     : Icons.star_border,
                                             color: Colors.amber,
@@ -363,7 +383,7 @@ class _SearchTailorState extends State<SearchTailor> {
                                         }),
                                         SizedBox(width: 4),
                                         Text(
-                                          rating.toString(),
+                                          rating.toStringAsFixed(1),
                                           style: TextStyle(
                                             color: Colors.grey.shade600,
                                             fontSize: 14,
@@ -371,9 +391,7 @@ class _SearchTailorState extends State<SearchTailor> {
                                         ),
                                       ],
                                     ),
-                                    
                                     SizedBox(height: 8),
-                                    
                                     // Specialization
                                     Row(
                                       children: [
@@ -396,9 +414,7 @@ class _SearchTailorState extends State<SearchTailor> {
                                         ),
                                       ],
                                     ),
-                                    
                                     SizedBox(height: 4),
-                                    
                                     // Contact
                                     Row(
                                       children: [
@@ -423,7 +439,6 @@ class _SearchTailorState extends State<SearchTailor> {
                             ),
                           ],
                         ),
-                        
                         // Action Buttons
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -450,9 +465,10 @@ class _SearchTailorState extends State<SearchTailor> {
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     Navigator.push(
-                                      context, 
+                                      context,
                                       MaterialPageRoute(
-                                        builder: (context) => TailorProfile(tailor: data['tailor_id']),
+                                        builder: (context) =>
+                                            TailorProfile(tailor: data['tailor_id']),
                                       ),
                                     );
                                   },
