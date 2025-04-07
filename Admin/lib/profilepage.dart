@@ -18,10 +18,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> fetchUserProfile() async {
     try {
       final user = supabase.auth.currentUser!.id;
-      if (user == null) {
-        print("No user logged in");
-        return;
-      }
 
       final response = await supabase.from('tbl_tailor').select().eq('tailor_id', user).single();
 

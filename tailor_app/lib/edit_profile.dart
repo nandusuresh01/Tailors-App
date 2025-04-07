@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:tailor_app/main.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -12,6 +13,9 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  final primaryColor = const Color(0xFF6A1B9A); // Deep purple from home.dart
+  final accentColor = const Color(0xFFE91E63); // Pink accent from home.dart
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
@@ -144,115 +148,287 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Edit Profile"),
-        backgroundColor: Colors.blue,
+        elevation: 0,
+        backgroundColor: primaryColor,
+        title: Text(
+          "Edit Profile",
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(25),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    /// Profile Image Picker
-                    GestureDetector(
-                      onTap: handleImagePick,
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: pickedImage != null
-                            ? FileImage(pickedImage!)
-                            : (originalPhoto.isNotEmpty
-                                ? NetworkImage(originalPhoto)
-                                : null) as ImageProvider?,
-                        child: pickedImage == null && originalPhoto.isEmpty
-                            ? const Icon(Icons.camera_alt,
-                                size: 40, color: Colors.white)
-                            : null,
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Header Section with Image Picker
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    /// Name
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                          labelText: "Name", border: OutlineInputBorder()),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: handleImagePick,
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 60,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: pickedImage != null
+                                      ? FileImage(pickedImage!)
+                                      : (originalPhoto.isNotEmpty
+                                          ? NetworkImage(originalPhoto)
+                                          : null) as ImageProvider?,
+                                  child: (pickedImage == null &&
+                                          originalPhoto.isEmpty)
+                                      ? Icon(
+                                          Icons.person,
+                                          size: 60,
+                                          color: primaryColor,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Change Profile Photo",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 15),
+                  ),
 
-                    /// Contact
-                    TextFormField(
-                      controller: contactController,
-                      decoration: const InputDecoration(
-                          labelText: "Contact", border: OutlineInputBorder()),
+                  // Form Section
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        _buildTextField(
+                          "Full Name",
+                          Icons.person_outline,
+                          nameController,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          "Contact Number",
+                          Icons.phone_outlined,
+                          contactController,
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          "Address",
+                          Icons.location_on_outlined,
+                          addressController,
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(
+                          "District",
+                          Icons.map_outlined,
+                          districtList,
+                          selectedDistrict,
+                          (String? newValue) {
+                            setState(() {
+                              selectedDistrict = newValue;
+                              selectedPlace = null;
+                              fetchPlaces(newValue!);
+                            });
+                          },
+                          "district_id",
+                          "district_name",
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(
+                          "Place",
+                          Icons.place_outlined,
+                          placeList,
+                          selectedPlace,
+                          (String? newValue) {
+                            setState(() {
+                              selectedPlace = newValue;
+                            });
+                          },
+                          "place_id",
+                          "place_name",
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: updateProfile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: Text(
+                              "Save Changes",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 15),
-
-                    /// Address
-                    TextFormField(
-                      controller: addressController,
-                      decoration: const InputDecoration(
-                          labelText: "Address", border: OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 15),
-
-                    /// District Dropdown
-                    DropdownButtonFormField<String>(
-                      value: selectedDistrict,
-                      hint: const Text("Select District"),
-                      items: districtList.map((data) {
-                        return DropdownMenuItem<String>(
-                          value: data['district_id'].toString(),
-                          child: Text(data['district_name']),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedDistrict = newValue;
-                          selectedPlace = null;
-                          placeList.clear();
-                        });
-                        fetchPlaces(newValue!);
-                      },
-                      decoration: const InputDecoration(
-                          labelText: 'District', border: OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 15),
-
-                    /// Place Dropdown
-                    DropdownButtonFormField<String>(
-                      value: selectedPlace,
-                      hint: const Text("Select Place"),
-                      items: placeList.map((data) {
-                        return DropdownMenuItem<String>(
-                          value: data['place_id'].toString(),
-                          child: Text(data['place_name']),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedPlace = newValue;
-                        });
-                      },
-                      decoration: const InputDecoration(
-                          labelText: 'Place', border: OutlineInputBorder()),
-                    ),
-                    const SizedBox(height: 20),
-
-                    /// Update Button
-                    ElevatedButton(
-                      onPressed: updateProfile,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: const Text("Update Profile"),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    IconData icon,
+    TextEditingController controller, {
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(icon, color: primaryColor),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown(
+    String label,
+    IconData icon,
+    List<Map<String, dynamic>> items,
+    String? selectedValue,
+    void Function(String?) onChanged,
+    String valueKey,
+    String labelKey,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: selectedValue,
+        items: items.map((item) {
+          return DropdownMenuItem<String>(
+            value: item[valueKey].toString(),
+            child: Text(item[labelKey].toString()),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(icon, color: primaryColor),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
     );
   }
 }

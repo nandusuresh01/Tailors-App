@@ -11,7 +11,11 @@ class MyMaterialPage extends StatefulWidget {
   _MyMaterialPageState createState() => _MyMaterialPageState();
 }
 
-class _MyMaterialPageState extends State<MyMaterialPage> {
+class _MyMaterialPageState extends State<MyMaterialPage> with SingleTickerProviderStateMixin {
+  bool _showForm = false;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   File? _selectedImage;
@@ -278,137 +282,234 @@ class _MyMaterialPageState extends State<MyMaterialPage> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
     fetchCloth();
     fetchMaterials();
   }
 
   @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleForm() {
+    setState(() {
+      _showForm = !_showForm;
+      if (_showForm) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+        // Reset form when hiding
+        selectedClothMaterial = null;
+        descriptionController.clear();
+        amountController.clear();
+        _selectedImage = null;
+        selectedColors.clear();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Add New Material")),
+      appBar: AppBar(
+        title: const Text("Materials"),
+        actions: [
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: _toggleForm, label: Text("Add Material"), icon: AnimatedIcon(icon: AnimatedIcons.menu_close, progress: _animation)),
+          // IconButton(
+          //   icon: AnimatedIcon(
+          //     semanticLabel: "Add Material",
+          //     icon: AnimatedIcons.add_event,
+          //     progress: _animation,
+          //   ),
+          //   onPressed: _toggleForm,
+          // ),
+          SizedBox(width: 10,)
+        ],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: GestureDetector(
-                  onTap: handleImagePick,
-                  child: _selectedImage != null
-                      ? Container(
-                          height: 200,
-                          width: 300,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            image: DecorationImage(
-                                image: FileImage(_selectedImage!),
-                                fit: BoxFit.cover),
+              // Form Section with animation
+              SizeTransition(
+                sizeFactor: _animation,
+                child: FadeTransition(
+                  opacity: _animation,
+                  child: Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Add New Material",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        )
-                      : Container(
-                          height: 200,
-                          width: 300,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: Colors.grey[300],
-                          ),
-                          child: const Icon(Icons.camera_alt,
-                              size: 40, color: Colors.white),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: selectedClothMaterial,
-                hint: const Text("Select Cloth Material"),
-                items: clothMaterials.map((data) {
-                  return DropdownMenuItem<String>(
-                    value: data['clothtype_id'].toString(),
-                    child: Text(data['clothtype_name']),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedClothMaterial = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: "Description",
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Amount",
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: _showColorPickerDialog,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          children: selectedColors.isEmpty
-                              ? [
-                                  const Text("Select Colors",
-                                      style: TextStyle(color: Colors.grey))
-                                ]
-                              : selectedColors.map((color) {
-                                  return Chip(
-                                    label: Text(color['name']!),
-                                    backgroundColor: _hexToColor(color['hex']!)
-                                        .withOpacity(0.2),
-                                    avatar: CircleAvatar(
-                                      backgroundColor:
-                                          _hexToColor(color['hex']!),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: GestureDetector(
+                              onTap: handleImagePick,
+                              child: _selectedImage != null
+                                  ? Container(
+                                      height: 200,
+                                      width: 300,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        image: DecorationImage(
+                                            image: FileImage(_selectedImage!),
+                                            fit: BoxFit.cover),
+                                      ),
+                                    )
+                                  : Container(
+                                      height: 200,
+                                      width: 300,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        color: Colors.grey[300],
+                                      ),
+                                      child: const Icon(Icons.camera_alt,
+                                          size: 40, color: Colors.white),
                                     ),
-                                  );
-                                }).toList(),
-                        ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            value: selectedClothMaterial,
+                            hint: const Text("Select Cloth Material"),
+                            items: clothMaterials.map((data) {
+                              return DropdownMenuItem<String>(
+                                value: data['clothtype_id'].toString(),
+                                child: Text(data['clothtype_name']),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedClothMaterial = value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: descriptionController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: "Description",
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: amountController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: "Amount",
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: _showColorPickerDialog,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Wrap(
+                                      spacing: 8,
+                                      children: selectedColors.isEmpty
+                                          ? [
+                                              const Text("Select Colors",
+                                                  style: TextStyle(
+                                                      color: Colors.grey))
+                                            ]
+                                          : selectedColors.map((color) {
+                                              return Chip(
+                                                label: Text(color['name']!),
+                                                backgroundColor: _hexToColor(
+                                                        color['hex']!)
+                                                    .withOpacity(0.2),
+                                                avatar: CircleAvatar(
+                                                  backgroundColor:
+                                                      _hexToColor(color['hex']!),
+                                                ),
+                                              );
+                                            }).toList(),
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Center(
+                            child: _isLoading
+                                ? const CircularProgressIndicator()
+                                : ElevatedButton(
+                                    onPressed: () async {
+                                      await _submitMaterial();
+                                      if (!_isLoading) {
+                                        _toggleForm(); // Hide form after successful submission
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 32, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text("Submit"),
+                                  ),
+                          ),
+                        ],
                       ),
-                      const Icon(Icons.arrow_drop_down),
-                    ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Center(
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _submitMaterial,
-                        child: const Text("Submit"),
-                      ),
+              const SizedBox(height: 24),
+
+              // Materials List Section
+              const Text(
+                "Materials List",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 20),
-              const Text("Materials Used",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               myMaterials.isEmpty
                   ? const Center(child: Text("No materials added yet"))
                   : ListView.builder(

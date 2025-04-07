@@ -1,138 +1,205 @@
 import 'package:flutter/material.dart';
+import 'package:project/main.dart';
 
 class AdminComplaintsPage extends StatefulWidget {
+  const AdminComplaintsPage({super.key});
+
   @override
-  _AdminComplaintsPageState createState() => _AdminComplaintsPageState();
+  State<AdminComplaintsPage> createState() => _AdminComplaintsPageState();
 }
 
-class _AdminComplaintsPageState extends State<AdminComplaintsPage> {
-  List<Map<String, String>> complaints = [
-    {"date": "2025-03-10", "status": "Resolved", "message": "Delayed delivery", "user": "John Doe", "reply": "Issue has been resolved."},
-    {"date": "2025-03-15", "status": "Pending", "message": "Wrong measurement", "user": "Jane Smith", "reply": ""}
-  ];
-
-  String selectedStatusFilter = "All";
-  List<String> statusOptions = ["All", "Pending", "Resolved"];
+class _AdminComplaintsPageState extends State<AdminComplaintsPage> with SingleTickerProviderStateMixin {
+  List<Map<String, dynamic>> complaints = [];
   TextEditingController replyController = TextEditingController();
-  Map<int, bool> isDropdownVisible = {};
+  bool isLoading = true;
+  late TabController _tabController;
 
-  void _updateComplaintStatus(int index, String newStatus) {
-    setState(() {
-      complaints[index]['status'] = newStatus;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Complaint status updated to $newStatus')),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    fetchComplaints();
   }
 
-  void _submitReply(int index) {
-    setState(() {
-      complaints[index]['reply'] = replyController.text;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Reply sent successfully')),
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> fetchComplaints() async {
+    try {
+      final response = await supabase
+          .from('tbl_complaint')
+          .select('''
+            *,
+            tailor:tailor_id(tailor_name),
+            user:user_id(user_name)
+          ''')
+          .order('created_at', ascending: false);
+      
+      setState(() {
+        complaints = List<Map<String, dynamic>>.from(response);
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching complaints: $e');
+      isLoading = false;
+    }
+  }
+
+  Future<void> updateComplaintStatus(int complaintId) async {
+    if (replyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a reply')),
+      );
+      return;
+    }
+
+    try {
+      await supabase
+          .from('tbl_complaint')
+          .update({
+            'complaint_status': 1,
+            'complaint_reply': replyController.text.trim()
+          })
+          .eq('id', complaintId);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reply sent successfully')),
+      );
+      replyController.clear();
+      fetchComplaints();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send reply')),
+      );
+      print('Error updating complaint: $e');
+    }
+  }
+
+  Widget buildComplaintCard(Map<String, dynamic> complaint, bool isUserComplaint) {
+    final bool isPending = complaint['complaint_status'] == 0;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ExpansionTile(
+        title: isUserComplaint 
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('User: ${complaint['user']['user_name']}'),
+                  Text('About Tailor: ${complaint['tailor']['tailor_name']}',
+                      style: const TextStyle(fontSize: 14)),
+                ],
+              )
+            : Text('Tailor: ${complaint['tailor']['tailor_name']}'),
+        subtitle: Text(
+          complaint['complaint_text'],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isPending ? Colors.orange : Colors.green,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            isPending ? 'Pending' : 'Resolved',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Complaint: ${complaint['complaint_text']}'),
+                const SizedBox(height: 8),
+                Text('Date: ${DateTime.parse(complaint['created_at']).toString().split('.')[0]}'),
+                if (complaint['reply'] != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Admin Reply:', 
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(complaint['complaint_reply']),
+                      ],
+                    ),
+                  ),
+                ],
+                if (isPending) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: replyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Enter reply',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => updateComplaintStatus(complaint['id']),
+                    icon: const Icon(Icons.send),
+                    label: const Text('Send Reply'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
-    replyController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final userComplaints = complaints.where((c) => c['user_id'] != null).toList();
+    final tailorComplaints = complaints.where((c) => c['user_id'] == null).toList();
+
     return Scaffold(
-      appBar: AppBar(title: Text('Admin - Complaints Management')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Complaints List', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            DropdownButton<String>(
-              value: selectedStatusFilter,
-              items: statusOptions.map((status) {
-                return DropdownMenuItem(value: status, child: Text(status));
-              }).toList(),
-              onChanged: (newFilter) {
-                setState(() {
-                  selectedStatusFilter = newFilter!;
-                });
-              },
-            ),
-            SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: complaints.length,
-                itemBuilder: (context, index) {
-                  final complaint = complaints[index];
-                  if (selectedStatusFilter != "All" && complaint['status'] != selectedStatusFilter) {
-                    return SizedBox.shrink();
-                  }
-                  return Card(
-                    elevation: 3,
-                    margin: EdgeInsets.symmetric(vertical: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text('${complaint['user']} - ${complaint['message']}', style: TextStyle(fontWeight: FontWeight.bold)),
-                              ),
-                              IconButton(
-                                icon: Icon(isDropdownVisible[index] == true ? Icons.arrow_drop_up : Icons.arrow_drop_down),
-                                onPressed: () {
-                                  setState(() {
-                                    isDropdownVisible[index] = !(isDropdownVisible[index] ?? false);
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          if (isDropdownVisible[index] == true) ...[
-                            Text('Date: ${complaint['date']}'),
-                            SizedBox(height: 10),
-                            DropdownButton<String>(
-                              value: complaint['status'],
-                              items: ['Pending', 'Resolved'].map((status) {
-                                return DropdownMenuItem(value: status, child: Text(status));
-                              }).toList(),
-                              onChanged: (newStatus) {
-                                if (newStatus != null) {
-                                  _updateComplaintStatus(index, newStatus);
-                                }
-                              },
-                            ),
-                            SizedBox(height: 10),
-                            TextField(
-                              controller: replyController,
-                              decoration: InputDecoration(
-                                labelText: 'Enter reply',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            SizedBox(height: 5),
-                            ElevatedButton(
-                              onPressed: () => _submitReply(index),
-                              child: Text('Send Reply'),
-                            ),
-                            if (complaint['reply']!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 10.0),
-                                child: Text('Reply: ${complaint['reply']}', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                              ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+      appBar: AppBar(
+        title: const Text('Complaints Management'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'User Complaints'),
+            Tab(text: 'Tailor Complaints'),
           ],
         ),
       ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                // User Complaints Tab
+                userComplaints.isEmpty
+                    ? const Center(child: Text('No user complaints'))
+                    : ListView.builder(
+                        itemCount: userComplaints.length,
+                        itemBuilder: (context, index) => buildComplaintCard(userComplaints[index], true),
+                      ),
+                
+                // Tailor Complaints Tab
+                tailorComplaints.isEmpty
+                    ? const Center(child: Text('No tailor complaints'))
+                    : ListView.builder(
+                        itemCount: tailorComplaints.length,
+                        itemBuilder: (context, index) => buildComplaintCard(tailorComplaints[index], false),
+                      ),
+              ],
+            ),
     );
   }
 }

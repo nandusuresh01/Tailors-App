@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:tailor_app/booking_details.dart';
 import 'package:tailor_app/login.dart';
 import 'package:tailor_app/main.dart';
 import 'package:tailor_app/mybookings.dart';
@@ -24,13 +23,34 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic> tailorProfile = {};
   List<FlSpot> weeklyEarnings = [];
   List<Map<String, dynamic>> recentOrders = [];
+  double maxValue = 500;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchTailorProfile();
-    _fetchDashboardStats();
-    _fetchWeeklyEarnings();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      await Future.wait([
+        _fetchTailorProfile(),
+        _fetchDashboardStats(),
+        _fetchWeeklyEarnings(),
+      ]);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading dashboard data'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchTailorProfile() async {
@@ -109,6 +129,10 @@ class _HomePageState extends State<HomePage> {
         int amount = (data['amount'] as num?)?.toInt() ?? 0;
         totalAmount += amount;
       }
+      int starting = 500;
+      while(starting<totalAmount){
+        starting = starting+500;
+      }
       setState(() {
         dashboardStats['newOrders'] = newOrders;
         dashboardStats['ongoingOrders'] = ongoingOrders;
@@ -116,6 +140,7 @@ class _HomePageState extends State<HomePage> {
         dashboardStats['totalEarnings'] = totalAmount;
         dashboardStats['pendingPayments'] = pendingAmount;
         dashboardStats['materialsCount'] = material;
+        maxValue = starting.toDouble();
       });
     } catch (e) {
       print("Error fetching dashboard stats: $e");
@@ -159,48 +184,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  String getStatus(int status) {
-    switch (status) {
-      case 1:
-        return 'New Order';
-      case 2:
-        return 'Accepted';
-      case 3:
-        return 'Rejected';
-      case 4:
-        return 'Payment Completed';
-      case 5:
-        return 'Work Started';
-      case 6:
-        return 'Work Completed';
-      case 7:
-        return 'Delivered';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  Color getStatusColor(int status) {
-    switch (status) {
-      case 1:
-        return Colors.blue; // New Order
-      case 2:
-        return Colors.green; // Accepted
-      case 3:
-        return Colors.red; // Rejected
-      case 4:
-        return Colors.purple; // Payment Completed
-      case 5:
-        return Colors.orange; // Work Started
-      case 6:
-        return Colors.teal; // Work Completed
-      case 7:
-        return Colors.greenAccent; // Delivered
-      default:
-        return Colors.grey; // Unknown
-    }
-  }
-
   String formatDate(String? date) {
     if (date == null) return "Not Given";
     try {
@@ -213,6 +196,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: primaryColor),
+        ),
+      );
+    }
+
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
@@ -356,7 +347,7 @@ class _HomePageState extends State<HomePage> {
                       Row(
                         children: [
                           _buildProfileStat(
-                              Icons.star, "${tailorProfile['rating'].toStringAsFixed(1)}"),
+                              Icons.star, "${tailorProfile['rating']}"),
                           SizedBox(width: 16),
                           _buildProfileStat(Icons.check_circle,
                               "${tailorProfile['completedOrders']} orders"),
@@ -410,14 +401,14 @@ class _HomePageState extends State<HomePage> {
               Icons.shopping_bag_outlined,
               accentColor,
             ),
-            SizedBox(width: 12),
+            SizedBox(width: 6),
             _buildStatCard(
               "Ongoing",
               "${dashboardStats['ongoingOrders'] ?? 0}",
               Icons.access_time,
               Colors.orange,
             ),
-            SizedBox(width: 12),
+            SizedBox(width: 6),
             _buildStatCard(
               "Completed",
               "${dashboardStats['completedOrders'] ?? 0}",
@@ -474,11 +465,13 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Icon(icon, color: color, size: 20),
                 SizedBox(width: 6),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -549,6 +542,7 @@ class _HomePageState extends State<HomePage> {
             child: LineChart(
               LineChartData(
                 gridData: FlGridData(
+                  
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 500,
@@ -613,7 +607,7 @@ class _HomePageState extends State<HomePage> {
                 minX: 0,
                 maxX: 6,
                 minY: 0,
-                maxY: 1500,
+                maxY: maxValue,
                 lineBarsData: [
                   LineChartBarData(
                     spots: weeklyEarnings,
@@ -636,121 +630,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
-    Color statusColor = getStatusColor(
-        [1, 2, 3, 4, 5, 6, 7].indexWhere((s) => getStatus(s) == order['status']) +
-            1);
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => BookingDetails(booking: order['id'])));
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Customer Image
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(Icons.person, color: Colors.grey[400]),
-                ),
-                SizedBox(width: 12),
-                // Order Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order['customerName'] ?? 'Unknown Customer',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        order['orderType'],
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              size: 14, color: Colors.grey[600]),
-                          SizedBox(width: 4),
-                          Text(
-                            "Due: ${DateFormat('MMM dd').format(order['dueDate'])}",
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Status and Amount
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        order['status'],
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "₹${NumberFormat('#,###').format(order['amount'])}",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+ 
 
   Widget _buildBottomNavigationBar() {
     return BottomAppBar(
