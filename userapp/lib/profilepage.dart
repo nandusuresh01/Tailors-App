@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:userapp/change_password.dart';
+import 'package:userapp/complaints.dart';
 import 'package:userapp/editprofile.dart';
 import 'package:userapp/login.dart';
 import 'package:userapp/main.dart';
@@ -149,7 +151,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icons.lock,
                     primaryColor,
                     () {
-                      // Navigate to Change Password Screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ChangePasswordPage()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionButton(
+                    "My Complaints",
+                    Icons.report_problem,
+                    primaryColor,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const UserComplaintsPage()),
+                      );
                     },
                   ),
                   const SizedBox(height: 12),

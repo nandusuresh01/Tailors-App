@@ -148,12 +148,6 @@ class _RegisterState extends State<Register> {
       _showErrorSnackBar("Please upload your ID proof");
       return false;
     }
-    
-    if (selectedSpecializations.isEmpty) {
-      _showErrorSnackBar("Please select at least one specialization");
-      return false;
-    }
-    
     return true;
   }
 
@@ -167,7 +161,7 @@ class _RegisterState extends State<Register> {
     
     try {
       final String? imageUrl = pickedImage != null ? await uploadPhoto(pickedImage!, 'tailor') : null;
-      final String? proofUrl = pickedProof != null ? await uploadPhoto(pickedProof!, 'tailor_proof') : null;
+      final String? proofUrl = pickedProof != null ? await uploadPhoto(pickedProof!, 'tailor') : null;
 
       await supabase.auth.signUp(
         email: emailController.text, 

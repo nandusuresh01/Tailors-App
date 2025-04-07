@@ -250,7 +250,7 @@ class _HomePageState extends State<HomePage> {
     return SliverAppBar(
       floating: true,
       title: Text(
-        "Tailor Dashboard",
+        "StitchPro Tailor Dashboard",
         style: TextStyle(
           color: primaryColor,
           fontWeight: FontWeight.bold,

@@ -219,23 +219,7 @@ class _LoginState extends State<Login> {
                           ),
                           SizedBox(height: 12),
                           
-                          // Forgot Password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                // Add forgot password functionality
-                              },
-                              child: Text(
-                                'Forgot Password?',
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 20),
+                          
                           
                           // Login Button
                           SizedBox(

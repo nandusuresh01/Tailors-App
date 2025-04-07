@@ -1001,7 +1001,7 @@ class _BookingDetailsState extends State<BookingDetails> {
                         ),
                       ),
                     ),
-                    if (bookingData != null && bookingData!['status'] == 0)
+                    if (bookingData != null && bookingData!['status'] == 1)
                       Padding(
                         padding: const EdgeInsets.all(15.0),
                         child: Row(

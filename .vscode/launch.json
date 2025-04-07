@@ -1,0 +1,68 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Admin",
+            "cwd": "Admin",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Admin (profile mode)",
+            "cwd": "Admin",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Admin (release mode)",
+            "cwd": "Admin",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "tailor_app",
+            "cwd": "tailor_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "tailor_app (profile mode)",
+            "cwd": "tailor_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "tailor_app (release mode)",
+            "cwd": "tailor_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "userapp",
+            "cwd": "userapp",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "userapp (profile mode)",
+            "cwd": "userapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "userapp (release mode)",
+            "cwd": "userapp",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
