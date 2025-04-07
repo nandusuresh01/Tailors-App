@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
-import 'package:project/form_validation.dart';
 
 class Manageclothtype extends StatefulWidget {
   const Manageclothtype({super.key});
@@ -11,28 +10,21 @@ class Manageclothtype extends StatefulWidget {
 
 class _ManageclothtypeState extends State<Manageclothtype> {
   final TextEditingController clothtypeController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
   Future<void> insert() async {
-    if (!_formKey.currentState!.validate()) return;
-
     try {
       await supabase.from('tbl_clothtype').insert({
         'clothtype_name': clothtypeController.text,
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Cloth Type Added'),
-        ));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('clothtype Type Added'),
+      ));
       clothtypeController.clear();
       fetchclothtype();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Failed'),
-        ));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed'),
+      ));
       print("Error: $e");
     }
   }
@@ -78,16 +70,13 @@ class _ManageclothtypeState extends State<Manageclothtype> {
         style: TextStyle(color:Colors.red),
         )
      ),
-     body: Form(
-      key: _formKey,
-      child: ListView(
+     body: ListView(
       padding: EdgeInsets.all(20),
       children: [
         TextFormField(
           controller: clothtypeController,
-          validator: (value) => FormValidation.validateValue(value),
           decoration: InputDecoration(
-            labelText: "Cloth Type",
+            labelText: "clothtype Type",
             border: OutlineInputBorder()
           ),
         ),
@@ -118,7 +107,6 @@ class _ManageclothtypeState extends State<Manageclothtype> {
         },)
       ],
      ),
-    ),
     );
   }
 }

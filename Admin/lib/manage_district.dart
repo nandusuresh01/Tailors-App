@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
-import 'package:project/form_validation.dart';
 
 class ManageDistrict extends StatefulWidget {
   const ManageDistrict({super.key});
@@ -11,29 +10,22 @@ class ManageDistrict extends StatefulWidget {
 
 class _ManageDistrictState extends State<ManageDistrict> {
   final TextEditingController districtController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool isAdding = false;
 
   Future<void> insert() async {
-    if (!_formKey.currentState!.validate()) return;
-
     try {
       await supabase.from('tbl_district').insert({
         'district_name': districtController.text,
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('District Added'),
-        ));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('District Added'),
+      ));
       districtController.clear();
       fetchdistrict();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Failed to add district'),
-        ));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to add district'),
+      ));
       print("Error: $e");
     }
   }
@@ -76,9 +68,7 @@ class _ManageDistrictState extends State<ManageDistrict> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
+      body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
@@ -88,7 +78,6 @@ class _ManageDistrictState extends State<ManageDistrict> {
                 Expanded(
                   child: TextFormField(
                     controller: districtController,
-                    validator: (value) => FormValidation.validateValue(value),
                     decoration: const InputDecoration(
                       labelText: "District Name",
                       border: OutlineInputBorder(),
@@ -97,7 +86,7 @@ class _ManageDistrictState extends State<ManageDistrict> {
                 ),
                 SizedBox(
                   width: 150,
-
+                
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -156,7 +145,6 @@ class _ManageDistrictState extends State<ManageDistrict> {
             ),
           ],
         ),
-      ),
       ),
     );
   }

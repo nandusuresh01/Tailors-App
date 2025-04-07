@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:userapp/main.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:userapp/form_validation.dart';
 
 class BookingDetails extends StatefulWidget {
   final int booking;
@@ -33,7 +32,7 @@ class _BookingDetailsState extends State<BookingDetails> {
               "*, tbl_dress(dress_id, dress_amount, dress_remark, tbl_material(material_amount, material_photo, material_colors, tbl_clothtype(clothtype_name)), tbl_measurement(*, tbl_attribute(attribute_name)), tbl_category(category_name))")
           .eq('id', widget.booking)
           .maybeSingle()
-          .limit(1);
+          .limit(1);  
       if (booking != null) {
         setState(() {
           bookingId = booking['id'];
@@ -358,7 +357,6 @@ class _BookingDetailsState extends State<BookingDetails> {
 
   void showComplaintDialog() {
     TextEditingController complaintController = TextEditingController();
-    final _complaintFormKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -375,16 +373,13 @@ class _BookingDetailsState extends State<BookingDetails> {
               color: primaryColor,
             ),
           ),
-          content: Form(
-            key: _complaintFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: complaintController,
-                  maxLines: 3,
-                  validator: (value) => FormValidation.validateField(value),
-                  decoration: InputDecoration(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: complaintController,
+                maxLines: 3,
+                decoration: InputDecoration(
                   labelText: "Describe your complaint",
                   labelStyle: TextStyle(color: primaryColor),
                   border: OutlineInputBorder(
@@ -392,8 +387,7 @@ class _BookingDetailsState extends State<BookingDetails> {
                   ),
                 ),
               ),
-              ],
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -405,7 +399,7 @@ class _BookingDetailsState extends State<BookingDetails> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (_complaintFormKey.currentState!.validate()) {
+                if (complaintController.text.isNotEmpty) {
                   try {
                     await supabase.from('tbl_complaint').insert({
                       'tailor_id': bookingData!['tailor_id'],
@@ -456,7 +450,6 @@ class _BookingDetailsState extends State<BookingDetails> {
   void showRatingDialog() {
   double rating = 0.0;
   TextEditingController feedbackController = TextEditingController();
-  final _ratingFormKey = GlobalKey<FormState>();
 
   showDialog(
     context: context,
@@ -475,9 +468,7 @@ class _BookingDetailsState extends State<BookingDetails> {
         ),
         content: StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
-            return Form(
-              key: _ratingFormKey,
-              child: Column(
+            return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
@@ -497,7 +488,7 @@ class _BookingDetailsState extends State<BookingDetails> {
                     );
                   }),
                 ),
-
+                
                 const SizedBox(height: 16),
                 TextField(
                   controller: feedbackController,
@@ -511,7 +502,6 @@ class _BookingDetailsState extends State<BookingDetails> {
                   ),
                 ),
               ],
-            ),
             );
           },
         ),
@@ -525,7 +515,7 @@ class _BookingDetailsState extends State<BookingDetails> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (rating > 0 && _ratingFormKey.currentState!.validate()) {
+              if (rating > 0) {
                 try {
                   await supabase.from('tbl_rating').insert({
                     'tailor_id': bookingData!['tailor_id'],

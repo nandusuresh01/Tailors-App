@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:tailor_app/main.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:tailor_app/form_validation.dart';
 
 class Complaints extends StatefulWidget {
   const Complaints({super.key});
@@ -18,7 +17,6 @@ class _ComplaintsState extends State<Complaints> {
   List<Map<String, dynamic>> complaints = [];
   bool isLoading = true;
   final TextEditingController _complaintController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -60,13 +58,10 @@ class _ComplaintsState extends State<Complaints> {
             color: primaryColor,
           ),
         ),
-        content: Form(
-          key: _formKey,
-          child: TextFormField(
-            controller: _complaintController,
-            maxLines: 4,
-            validator: (value) => FormValidation.validateField(value),
-            decoration: InputDecoration(
+        content: TextField(
+          controller: _complaintController,
+          maxLines: 4,
+          decoration: InputDecoration(
             hintText: 'Describe your issue here...',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -75,7 +70,6 @@ class _ComplaintsState extends State<Complaints> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: primaryColor),
             ),
-          ),
           ),
         ),
         actions: [
@@ -91,7 +85,7 @@ class _ComplaintsState extends State<Complaints> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (_complaintController.text.trim().isNotEmpty) {
                 try {
                   await supabase.from('tbl_complaint').insert({
                     'tailor_id': supabase.auth.currentUser!.id,
@@ -102,23 +96,19 @@ class _ComplaintsState extends State<Complaints> {
                   Navigator.pop(context);
                   fetchComplaints();
 
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
                       content: Text('Complaint submitted successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
-                  }
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
                       content: Text('Failed to submit complaint'),
                       backgroundColor: Colors.red,
                     ),
                   );
-                  }
                 }
               }
             },

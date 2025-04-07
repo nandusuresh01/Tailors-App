@@ -3,7 +3,6 @@ import 'package:tailor_app/home.dart';
 import 'package:tailor_app/main.dart';
 import 'package:tailor_app/register.dart';
 import 'package:flutter/gestures.dart';
-import 'package:tailor_app/form_validation.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -15,34 +14,31 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   Future<void> login() async {
-    if (!_formKey.currentState!.validate()) return;
-
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       await supabase.auth.signInWithPassword(
         email: emailController.text,
         password: passwordController.text,
       );
-
+      
       if (!mounted) return;
-
+      
       String userid = supabase.auth.currentUser!.id;
       final response = await supabase
           .from("tbl_tailor")
           .select()
           .eq("tailor_id", userid)
           .single();
-
+          
       if (!mounted) return;
-
+      
       if (response.isNotEmpty) {
         if (response['tailor_status'] == 0) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -69,7 +65,7 @@ class _LoginState extends State<Login> {
       }
     } catch (e) {
       if (!mounted) return;
-
+      
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Invalid credentials"),
@@ -88,8 +84,8 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Color(0xFF6A1B9A); // Deep purple for fashion theme
-  final secondaryColor = Color(0xFFE91E63);
-
+  final secondaryColor = Color(0xFFE91E63); 
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -122,7 +118,7 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                     SizedBox(height: 24),
-
+                    
                     // Title
                     Text(
                       'Welcome Back',
@@ -141,7 +137,7 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                     SizedBox(height: 32),
-
+                    
                     // Login Form
                     Container(
                       padding: EdgeInsets.all(24),
@@ -156,15 +152,12 @@ class _LoginState extends State<Login> {
                           ),
                         ],
                       ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
+                      child: Column(
+                        children: [
                           // Email Field
                           TextFormField(
                             controller: emailController,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (value) => FormValidation.validateEmail(value),
                             decoration: InputDecoration(
                               labelText: 'Email Address',
                               hintText: 'Enter your email',
@@ -187,12 +180,11 @@ class _LoginState extends State<Login> {
                             ),
                           ),
                           SizedBox(height: 20),
-
+                          
                           // Password Field
                           TextFormField(
                             controller: passwordController,
                             obscureText: !_isPasswordVisible,
-                            validator: (value) => FormValidation.validatePassword(value),
                             decoration: InputDecoration(
                               labelText: 'Password',
                               hintText: 'Enter your password',
@@ -226,7 +218,7 @@ class _LoginState extends State<Login> {
                             ),
                           ),
                           SizedBox(height: 12),
-
+                          
                           // Forgot Password
                           Align(
                             alignment: Alignment.centerRight,
@@ -244,7 +236,7 @@ class _LoginState extends State<Login> {
                             ),
                           ),
                           SizedBox(height: 20),
-
+                          
                           // Login Button
                           SizedBox(
                             width: double.infinity,
@@ -277,12 +269,11 @@ class _LoginState extends State<Login> {
                                     ),
                             ),
                           ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
                     SizedBox(height: 24),
-
+                    
                     // Register Link
                     RichText(
                       text: TextSpan(

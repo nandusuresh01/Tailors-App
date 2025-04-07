@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:userapp/home.dart';
 import 'package:userapp/main.dart';
 import 'package:userapp/register.dart';
-import 'package:userapp/form_validation.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -14,34 +13,31 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   Future<void> login() async {
-    if (!_formKey.currentState!.validate()) return;
-
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       await supabase.auth.signInWithPassword(
         email: emailController.text,
         password: passwordController.text,
       );
-
+      
       if (!mounted) return;
-
+      
       String userid = supabase.auth.currentUser!.id;
       final response = await supabase
           .from("tbl_user")
           .select()
           .eq("user_id", userid)
           .single();
-
+          
       if (!mounted) return;
-
+      
       if (response.isNotEmpty) {
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (context) => Homescreen()));
@@ -54,7 +50,7 @@ class _LoginState extends State<Login> {
       }
     } catch (e) {
       if (!mounted) return;
-
+      
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Invalid credentials"),
@@ -74,7 +70,7 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     final primaryColor = Color(0xFF6A1B9A); // Deep purple for fashion theme
     final accentColor = Color(0xFFE91E63); // Pink accent
-
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -102,7 +98,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                         Image.asset(
-                          'assets/images/tailor_logo.png',
+                          'assets/images/tailor_logo.png', 
                           width: 100,
                           height: 100,
                           errorBuilder: (context, error, stackTrace) {
@@ -116,7 +112,7 @@ class _LoginState extends State<Login> {
                       ],
                     ),
                     SizedBox(height: 24),
-
+                    
                     // Title
                     Text(
                       'Welcome',
@@ -136,7 +132,7 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                     SizedBox(height: 40),
-
+                    
                     // Login Form
                     Container(
                       decoration: BoxDecoration(
@@ -152,11 +148,9 @@ class _LoginState extends State<Login> {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             // Email Field
                             Text(
                               'Email',
@@ -169,7 +163,6 @@ class _LoginState extends State<Login> {
                             TextFormField(
                               controller: emailController,
                               keyboardType: TextInputType.emailAddress,
-                              validator: (value) => FormValidation.validateEmail(value),
                               decoration: InputDecoration(
                                 hintText: 'Enter your email',
                                 prefixIcon: Icon(Icons.email_outlined, color: primaryColor),
@@ -191,7 +184,7 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                             SizedBox(height: 24),
-
+                            
                             // Password Field
                             Text(
                               'Password',
@@ -204,7 +197,6 @@ class _LoginState extends State<Login> {
                             TextFormField(
                               controller: passwordController,
                               obscureText: !_isPasswordVisible,
-                              validator: (value) => FormValidation.validatePassword(value),
                               decoration: InputDecoration(
                                 hintText: 'Enter your password',
                                 prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
@@ -237,9 +229,9 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                             SizedBox(height: 25),
-
-
-
+                            
+                            
+                            
                             // Login Button
                             SizedBox(
                               width: double.infinity,
@@ -272,13 +264,12 @@ class _LoginState extends State<Login> {
                                       ),
                               ),
                             ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
                     SizedBox(height: 24),
-
+                    
                     // Register Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -309,7 +300,7 @@ class _LoginState extends State<Login> {
                         ),
                       ],
                     ),
-
+                    
                     // Fashion-themed decoration
                     SizedBox(height: 40),
                     Row(
@@ -331,7 +322,7 @@ class _LoginState extends State<Login> {
       ),
     );
   }
-
+  
   Widget _buildFeatureIcon(IconData icon, String label) {
     return Column(
       children: [
