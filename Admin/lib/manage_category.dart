@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
+import 'package:project/form_validation.dart';
 
 class Managecategory extends StatefulWidget {
   const Managecategory({super.key});
@@ -10,8 +11,11 @@ class Managecategory extends StatefulWidget {
 
 class _ManagecategoryState extends State<Managecategory> {
   final TextEditingController categoryController = TextEditingController();
-  
+  final _formKey = GlobalKey<FormState>();
+
   Future<void> insert() async {
+    if (!_formKey.currentState!.validate()) return;
+
     try {
       await supabase.from('tbl_category').insert({
         'category_name': categoryController.text,
@@ -19,6 +23,8 @@ class _ManagecategoryState extends State<Managecategory> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Category Type Added'),
       ));
+      categoryController.clear();
+      fetchCategory();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Failed'),
@@ -60,7 +66,7 @@ class _ManagecategoryState extends State<Managecategory> {
     fetchCategory();
   }
 
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,11 +76,14 @@ class _ManagecategoryState extends State<Managecategory> {
         style: TextStyle(color:Colors.red),
         )
      ),
-     body: ListView(
+     body: Form(
+      key: _formKey,
+      child: ListView(
       padding: EdgeInsets.all(20),
       children: [
         TextFormField(
           controller: categoryController,
+          validator: (value) => FormValidation.validateValue(value),
           decoration: InputDecoration(
             labelText: "Category Type",
             border: OutlineInputBorder()
@@ -107,6 +116,7 @@ class _ManagecategoryState extends State<Managecategory> {
         },)
       ],
      ),
+    ),
     );
   }
 }

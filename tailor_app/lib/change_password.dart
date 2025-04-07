@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tailor_app/main.dart';
+import 'package:tailor_app/form_validation.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -16,11 +17,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
-  
+
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
-  
+
   bool _obscureOldPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
@@ -35,29 +36,29 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       isLoading = true;
     });
-    
+
   //   try {
   //     // First, verify the old password by attempting to sign in
   //     final response = await supabase.auth.signInWithPassword(
   //       email: supabase.auth.currentUser!.email!,
   //       password: _oldPasswordController.text,
   //     );
-      
+
   //     if (response.user == null) {
   //       throw Exception('Current password is incorrect');
   //     }
-      
+
   //     // If sign in was successful, update the password
   //     await supabase.auth.updateUser(
   //       UserAttributes(
   //         password: _newPasswordController.text,
   //       ),
   //     );
-      
+
   //     ScaffoldMessenger.of(context).showSnackBar(
   //       SnackBar(
   //         content: Text('Password changed successfully'),
@@ -68,7 +69,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   //         ),
   //       ),
   //     );
-      
+
   //     Navigator.pop(context);
   //   } catch (e) {
   //     print('Error changing password: $e');
@@ -125,8 +126,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
       Navigator.pop(context);
     } catch (e) {
-      print('Error changing password: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().contains('incorrect')
               ? 'Current password is incorrect'
@@ -136,7 +137,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-        ),);
+        ),
+      );
+      }
 }
   }
 
@@ -217,12 +220,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                           _obscureOldPassword = !_obscureOldPassword;
                         });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your current password';
-                        }
-                        return null;
-                      },
+                      validator: (value) => FormValidation.validatePassword(value),
                     ),
                     const SizedBox(height: 16),
                     _buildPasswordField(
@@ -235,15 +233,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                           _obscureNewPassword = !_obscureNewPassword;
                         });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a new password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      validator: (value) => FormValidation.validatePassword(value),
                     ),
                     const SizedBox(height: 16),
                     _buildPasswordField(
@@ -256,12 +246,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                           _obscureConfirmPassword = !_obscureConfirmPassword;
                         });
                       },
-                      validator: (value) {
-                        if (value != _newPasswordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
+                      validator: (value) => FormValidation.validateConfirmPassword(value, _newPasswordController.text),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:tailor_app/main.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:tailor_app/form_validation.dart';
 
 class Complaints extends StatefulWidget {
   const Complaints({super.key});
@@ -13,10 +14,11 @@ class Complaints extends StatefulWidget {
 class _ComplaintsState extends State<Complaints> {
   final primaryColor = const Color(0xFF6A1B9A); // Deep purple
   final accentColor = const Color(0xFFE91E63); // Pink accent
-  
+
   List<Map<String, dynamic>> complaints = [];
   bool isLoading = true;
   final TextEditingController _complaintController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -31,10 +33,10 @@ class _ComplaintsState extends State<Complaints> {
           .select()
           .eq('tailor_id', supabase.auth.currentUser!.id)
           .order('created_at', ascending: false);
-      
+
       // Filter out entries where user_id is not null
       final filteredResponse = response.where((data) => data['user_id'] == null).toList();
-      
+
       setState(() {
         complaints = List<Map<String, dynamic>>.from(filteredResponse);
         isLoading = false;
@@ -58,10 +60,13 @@ class _ComplaintsState extends State<Complaints> {
             color: primaryColor,
           ),
         ),
-        content: TextField(
-          controller: _complaintController,
-          maxLines: 4,
-          decoration: InputDecoration(
+        content: Form(
+          key: _formKey,
+          child: TextFormField(
+            controller: _complaintController,
+            maxLines: 4,
+            validator: (value) => FormValidation.validateField(value),
+            decoration: InputDecoration(
             hintText: 'Describe your issue here...',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -70,6 +75,7 @@ class _ComplaintsState extends State<Complaints> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: primaryColor),
             ),
+          ),
           ),
         ),
         actions: [
@@ -85,30 +91,34 @@ class _ComplaintsState extends State<Complaints> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_complaintController.text.trim().isNotEmpty) {
+              if (_formKey.currentState!.validate()) {
                 try {
                   await supabase.from('tbl_complaint').insert({
                     'tailor_id': supabase.auth.currentUser!.id,
                     'complaint_text': _complaintController.text.trim(),
                   });
-                  
+
                   _complaintController.clear();
                   Navigator.pop(context);
                   fetchComplaints();
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
                       content: Text('Complaint submitted successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
                       content: Text('Failed to submit complaint'),
                       backgroundColor: Colors.red,
                     ),
                   );
+                  }
                 }
               }
             },
@@ -192,7 +202,7 @@ class _ComplaintsState extends State<Complaints> {
                   itemBuilder: (context, index) {
                     final complaint = complaints[index];
                     final isReplied = complaint['complaint_status'] == 1;
-                    
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 16),

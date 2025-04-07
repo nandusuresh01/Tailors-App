@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
+import 'package:project/form_validation.dart';
 
 class ManagePlace extends StatefulWidget {
   const ManagePlace({super.key});
@@ -10,7 +11,8 @@ class ManagePlace extends StatefulWidget {
 
 class _ManagePlaceState extends State<ManagePlace> {
   final TextEditingController placeController = TextEditingController();
-String? selectedDistrict;
+  final _formKey = GlobalKey<FormState>();
+  String? selectedDistrict;
 
 @override
   void initState() {
@@ -19,22 +21,38 @@ String? selectedDistrict;
     fetchdistrict();
     fetchplace();
   }
-  
+
 Future<void> insert() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (selectedDistrict == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Please select a district'),
+        ));
+      }
+      return;
+    }
+
     try {
       await supabase.from('tbl_place').insert({
         'place_name': placeController.text,
         'district': selectedDistrict,
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Place Added'),
-      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Place Added'),
+        ));
+      }
       placeController.clear();
       selectedDistrict = null;
+      fetchplace();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed'),
-      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed'),
+        ));
+      }
       print("Error: $e");
     }
   }
@@ -79,7 +97,7 @@ Future<void> delete(int id) async {
       print("Error: $e");
     }
   }
-  
+
 
   @override
   Widget build(BuildContext context) {
@@ -90,15 +108,18 @@ Future<void> delete(int id) async {
         style: TextStyle(color:Colors.red),
         )
      ),
-     body: ListView(
+     body: Form(
+      key: _formKey,
+      child: ListView(
       padding: EdgeInsets.all(20),
       children: [
          DropdownButtonFormField<String>(
             value: selectedDistrict,
             hint: Text('Select District'),
+            validator: (value) => FormValidation.validateDropdown(value),
             items: district.map((districtItem) {
               return DropdownMenuItem<String>(
-                value: districtItem['district_id'].toString(), 
+                value: districtItem['district_id'].toString(),
                 child: Text(districtItem['district_name']),
               );
             }).toList(),
@@ -117,6 +138,7 @@ Future<void> delete(int id) async {
           ),
         TextFormField(
           controller: placeController,
+          validator: (value) => FormValidation.validateValue(value),
           decoration: InputDecoration(
             labelText: "Place",
             border: OutlineInputBorder()
@@ -150,6 +172,7 @@ Future<void> delete(int id) async {
         },)
       ],
      ),
+    ),
     );
   }
 }
