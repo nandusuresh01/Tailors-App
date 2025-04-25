@@ -26,6 +26,7 @@ Future<void> insert() async {
         'place_name': placeController.text,
         'district': selectedDistrict,
       });
+      fetchplace();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Place Added'),
       ));

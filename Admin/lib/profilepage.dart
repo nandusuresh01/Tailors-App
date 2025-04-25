@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
+import 'package:project/manage_login.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -96,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: const Text("Logout"),
                   onTap: () async {
                     await supabase.auth.signOut();
-                    Navigator.pushReplacementNamed(context, '/login'); // Redirect to login
+                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => ManageLogin(),), (route) => false);
                   },
                 ),
               ],

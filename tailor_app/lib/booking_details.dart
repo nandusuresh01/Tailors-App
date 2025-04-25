@@ -64,9 +64,10 @@ class _BookingDetailsState extends State<BookingDetails> {
   }
 
   double calculateDressMaterialCost(Map<String, dynamic> dress) {
+    final material = dress['tbl_material'];
+    if (material == null || material['material_amount'] == null) return 0.0; // Default to 0 if material_amount is null
+    final materialCostPerMeter = (material['material_amount'] as num).toDouble();
     final measurements = dress['tbl_measurement'] as List<dynamic>;
-    final materialCostPerMeter =
-        (dress['tbl_material']['material_amount'] as num).toDouble();
     final fabricLength = calculateFabricLength(measurements);
     return materialCostPerMeter * fabricLength;
   }
@@ -83,7 +84,7 @@ class _BookingDetailsState extends State<BookingDetails> {
     }
     return dressData.fold(
       0.0,
-      (sum, dress) => sum + calculateDressMaterialCost(dress),
+      (sum, dress) => sum + getDressCost(dress),
     );
   }
 
@@ -260,7 +261,7 @@ class _BookingDetailsState extends State<BookingDetails> {
         isLoading = true;
       });
 
-      Map<String,dynamic> updateData = {'status': newStatus};
+      Map<String, dynamic> updateData = {'status': newStatus};
       if (newStatus == 7 && trackingId != null && trackingId.isNotEmpty) {
         updateData['tracking_id'] = trackingId; // Add tracking ID to update
       }
@@ -701,8 +702,7 @@ class _BookingDetailsState extends State<BookingDetails> {
                   const SizedBox(height: 16),
                   // Change Status Button
                   if (bookingData != null &&
-                      (bookingData!['status'] == 2 ||
-                          bookingData!['status'] == 4 ||
+                      (bookingData!['status'] == 4 ||
                           bookingData!['status'] == 5 ||
                           bookingData!['status'] == 6))
                     Padding(
@@ -746,15 +746,16 @@ class _BookingDetailsState extends State<BookingDetails> {
                             final measurements =
                                 dress['tbl_measurement'] as List<dynamic>;
                             final material = dress['tbl_material'];
-                            final colors =
-                                (material['material_colors'] as List?)
-                                        ?.map((c) => c as Map<String, dynamic>)
-                                        .toList() ??
-                                    [];
+                            // Handle null material case for colors
+                            final colors = (material != null &&
+                                    material['material_colors'] != null)
+                                ? (material['material_colors'] as List)
+                                    .map((c) => c as Map<String, dynamic>)
+                                    .toList()
+                                : [];
                             String category =
                                 dress['tbl_category']['category_name'];
-                            String remark =
-                                dress['dress_remark'] ?? "No remarks";
+                            String remark = dress['dress_remark'] ?? "No remarks";
                             double fabricLength =
                                 calculateFabricLength(measurements);
                             double cost = getDressCost(dress);
@@ -810,8 +811,9 @@ class _BookingDetailsState extends State<BookingDetails> {
                                         ClipRRect(
                                           borderRadius:
                                               BorderRadius.circular(8),
-                                          child: material['material_photo'] !=
-                                                  null
+                                          child: material != null &&
+                                                  material['material_photo'] !=
+                                                      null
                                               ? Image.network(
                                                   material['material_photo'],
                                                   width: 80,
@@ -845,23 +847,41 @@ class _BookingDetailsState extends State<BookingDetails> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                material['tbl_clothtype']
-                                                    ['clothtype_name'],
+                                                material != null &&
+                                                        material['tbl_clothtype'] !=
+                                                            null
+                                                    ? material['tbl_clothtype']
+                                                            ['clothtype_name'] ??
+                                                        "Custom Material"
+                                                    : "Custom Material",
                                                 style: TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.bold,
                                                   color: primaryColor,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                "Cost: ₹${cost.toStringAsFixed(2)}",
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: accentColor,
+                                              if (material == null) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "User-provided material",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
                                                 ),
-                                              ),
+                                              ],
+                                              if (cost > 0) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "Cost: ₹${cost.toStringAsFixed(2)}",
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: accentColor,
+                                                  ),
+                                                ),
+                                              ],
                                               const SizedBox(height: 4),
                                               Text(
                                                 "Required Fabric Length: ${fabricLength.toStringAsFixed(1)} meters",
@@ -895,13 +915,11 @@ class _BookingDetailsState extends State<BookingDetails> {
                                                                 width: 0.5),
                                                           ),
                                                         ),
-                                                        const SizedBox(
-                                                            width: 4),
+                                                        const SizedBox(width: 4),
                                                         Text(
                                                           color['name'],
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 12),
+                                                          style: const TextStyle(
+                                                              fontSize: 12),
                                                         ),
                                                       ],
                                                     );

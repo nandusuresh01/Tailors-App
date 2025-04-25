@@ -24,6 +24,8 @@ class _SelectMaterialState extends State<SelectMaterial> {
   final primaryColor = const Color(0xFF6A1B9A);
   final accentColor = const Color(0xFFE91E63);
 
+  bool isUserProvidingMaterial = false; // New state for material source
+
   Future<void> fetchMaterial() async {
     try {
       final response = await supabase
@@ -32,7 +34,7 @@ class _SelectMaterialState extends State<SelectMaterial> {
           .eq('tailor_id', widget.tailor);
       setState(() {
         materials = response;
-        if (widget.dress != null && selectedMaterial.isEmpty) {
+        if (widget.dress != null && selectedMaterial.isEmpty && !isUserProvidingMaterial) {
           selectedMaterial = materials.firstWhere(
             (m) => m['material_id'] == widget.dress!['material_id'],
             orElse: () => {},
@@ -86,140 +88,141 @@ class _SelectMaterialState extends State<SelectMaterial> {
   }
 
   void showMaterials() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            "Select Material",
-            style: TextStyle(
-              color: primaryColor,
-              fontWeight: FontWeight.bold,
+    if (!isUserProvidingMaterial) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(
+              "Select Material",
+              style: TextStyle(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                children: materials.map((material) {
-                  final colors = (material['material_colors'] as List?)
-                          ?.map((c) => c as Map<String, dynamic>)
-                          .toList() ??
-                      [];
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          selectedMaterial = material;
-                        });
-                        Navigator.of(context).pop();
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: material['material_photo'] != null
-                                  ? Image.network(
-                                      material['material_photo'],
-                                      width: 60,
-                                      height: 60,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: materials.map((material) {
+                    final colors = (material['material_colors'] as List?)
+                            ?.map((c) => c as Map<String, dynamic>)
+                            .toList() ??
+                        [];
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            selectedMaterial = material;
+                          });
+                          Navigator.of(context).pop();
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: material['material_photo'] != null
+                                    ? Image.network(
+                                        material['material_photo'],
+                                        width: 60,
+                                        height: 60,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          width: 60,
+                                          height: 60,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.image,
+                                              size: 30, color: Colors.grey),
+                                        ),
+                                      )
+                                    : Container(
                                         width: 60,
                                         height: 60,
                                         color: Colors.grey[300],
                                         child: const Icon(Icons.image,
                                             size: 30, color: Colors.grey),
                                       ),
-                                    )
-                                  : Container(
-                                      width: 60,
-                                      height: 60,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.image,
-                                          size: 30, color: Colors.grey),
-                                    ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    material['tbl_clothtype']['clothtype_name'],
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryColor,
-                                    ),
-                                  ),
-                                  if (colors.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      children: colors.map((color) {
-                                        return Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    _hexToColor(color['hex']),
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                    color: Colors.grey,
-                                                    width: 0.5),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              color['name'],
-                                              style:
-                                                  const TextStyle(fontSize: 12),
-                                            ),
-                                          ],
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      material['tbl_clothtype']['clothtype_name'],
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                    if (colors.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children: colors.map((color) {
+                                          return Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 12,
+                                                height: 12,
+                                                decoration: BoxDecoration(
+                                                  color: _hexToColor(color['hex']),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                      color: Colors.grey,
+                                                      width: 0.5),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                color['name'],
+                                                style:
+                                                    const TextStyle(fontSize: 12),
+                                              ),
+                                            ],
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(color: accentColor),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(color: accentColor),
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -229,6 +232,7 @@ class _SelectMaterialState extends State<SelectMaterial> {
     fetchCategory();
     if (widget.dress != null) {
       _remarkController.text = widget.dress!['dress_remark'] ?? "";
+      isUserProvidingMaterial = widget.dress!['material_id'] == null; // Pre-set based on dress data
     }
   }
 
@@ -236,9 +240,15 @@ class _SelectMaterialState extends State<SelectMaterial> {
     try {
       int? bookingId = await getBooking();
       if (bookingId != null) {
+        // Determine material amount (0 if no material is selected or user provides material)
+        double materialAmount = 0.0;
+        if (!isUserProvidingMaterial && selectedMaterial.isNotEmpty) {
+          materialAmount = (selectedMaterial['material_amount'] as num?)?.toDouble() ?? 0.0;
+        }
+
         if (widget.dress != null) {
           await supabase.from('tbl_dress').update({
-            'material_id': selectedMaterial['material_id'],
+            'material_id': isUserProvidingMaterial ? null : selectedMaterial['material_id'],
             'dress_remark': _remarkController.text,
             'category_id': selectedCategory,
           }).eq('dress_id', widget.dress!['dress_id']);
@@ -260,7 +270,7 @@ class _SelectMaterialState extends State<SelectMaterial> {
           final response = await supabase
               .from('tbl_dress')
               .insert({
-                'material_id': selectedMaterial['material_id'],
+                'material_id': isUserProvidingMaterial ? null : selectedMaterial['material_id'],
                 'booking_id': bookingId,
                 'dress_remark': _remarkController.text,
                 'category_id': selectedCategory,
@@ -285,9 +295,17 @@ class _SelectMaterialState extends State<SelectMaterial> {
             backgroundColor: primaryColor,
           ),
         );
-        Navigator.pop(context, true);
+        // Return a map with the success status and material_amount
+        Navigator.pop(context, {
+          'success': true,
+          'material_amount': materialAmount,
+        });
       } else {
         print("No booking found to update.");
+        Navigator.pop(context, {
+          'success': false,
+          'material_amount': 0.0,
+        });
       }
     } catch (e) {
       print("Error booking: $e");
@@ -297,6 +315,10 @@ class _SelectMaterialState extends State<SelectMaterial> {
           backgroundColor: Colors.red,
         ),
       );
+      Navigator.pop(context, {
+        'success': false,
+        'material_amount': 0.0,
+      });
     }
   }
 
@@ -379,23 +401,45 @@ class _SelectMaterialState extends State<SelectMaterial> {
               ),
             ),
             const SizedBox(height: 20),
-            OutlinedButton(
-              onPressed: showMaterials,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: primaryColor),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            SwitchListTile(
+              title: Text(
+                "Provide My Own Material",
+                style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
               ),
-              child: Text(
-                "Select Material",
-                style:
-                    TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-              ),
+              value: isUserProvidingMaterial,
+              activeColor: accentColor,
+              onChanged: (value) {
+                setState(() {
+                  isUserProvidingMaterial = value;
+                  if (value) {
+                    selectedMaterial = {}; // Clear selected material if user provides their own
+                  } else if (widget.dress != null && widget.dress!['material_id'] != null) {
+                    selectedMaterial = materials.firstWhere(
+                      (m) => m['material_id'] == widget.dress!['material_id'],
+                      orElse: () => {},
+                    );
+                  }
+                });
+              },
             ),
             const SizedBox(height: 10),
-            if (selectedMaterial.isNotEmpty) ...[
+            if (!isUserProvidingMaterial)
+              OutlinedButton(
+                onPressed: showMaterials,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: primaryColor),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Select Material",
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            const SizedBox(height: 10),
+            if (!isUserProvidingMaterial && selectedMaterial.isNotEmpty) ...[
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -526,15 +570,15 @@ class _SelectMaterialState extends State<SelectMaterial> {
             OutlinedButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
-                  if (selectedMaterial.isNotEmpty) {
-                    booking();
-                  } else {
+                  if (!isUserProvidingMaterial && selectedMaterial.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text("Please select a material."),
                         backgroundColor: Colors.red,
                       ),
                     );
+                  } else {
+                    booking();
                   }
                 }
               },

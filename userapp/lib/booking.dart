@@ -21,13 +21,16 @@ class _UserProfileBookingPageState extends State<UserProfileBookingPage> {
     try {
       final response = await supabase
           .from("tbl_booking")
-          .select("*,tbl_dress(*),tbl_tailor(tailor_name)")
+          .select("*, tbl_dress(*), tbl_tailor(tailor_name)")
           .eq("user_id", supabase.auth.currentUser!.id);
       setState(() {
-        bookings = response;
+        bookings = response is List ? response.cast<Map<String, dynamic>>() : [];
       });
     } catch (e) {
       print('Error fetching bookings: $e');
+      setState(() {
+        bookings = [];
+      });
     }
   }
 
@@ -50,6 +53,10 @@ class _UserProfileBookingPageState extends State<UserProfileBookingPage> {
       case 4:
         return 'Payment Completed';
       case 5:
+        return 'Work Started';
+      case 6:
+        return 'Work Completed';
+      case 7:
         return 'Delivered';
       default:
         return 'Unknown';
@@ -140,22 +147,33 @@ class _UserProfileBookingPageState extends State<UserProfileBookingPage> {
                       itemBuilder: (context, index) {
                         final booking = bookings[index];
                         final status = booking['status'] as int;
-                        final tailorName = booking['tbl_tailor']['tailor_name'];
+                        final tailorName = booking['tbl_tailor']['tailor_name'] ?? "Unknown Tailor";
                         final itemCount = (booking['tbl_dress'] as List).length;
                         final createdAt = formatDate(booking['created_at']);
                         final amount = booking['amount']?.toString() ?? "Not Given";
-                        final deliveryDate =
-                            formatDate(booking['booking_fordate']);
+                        final deliveryDate = formatDate(booking['booking_fordate']);
 
                         return GestureDetector(
                           onTap: () {
-                            if(booking['status']==0){
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => BookTailor(id: booking['id'].toString(), booking: true,),));
-                              
-                            }
-                            else{
-                                                          Navigator.push(context, MaterialPageRoute(builder: (context) => BookingDetails(booking: booking['id']),));
-
+                            if (status == 0) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BookTailor(
+                                    id: booking['id'].toString(),
+                                    booking: true,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BookingDetails(
+                                    booking: booking['id'], // Pass the entire booking map
+                                  ),
+                                ),
+                              );
                             }
                           },
                           child: Card(

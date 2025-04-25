@@ -16,6 +16,7 @@ class _ManagecategoryState extends State<Managecategory> {
       await supabase.from('tbl_category').insert({
         'category_name': categoryController.text,
       });
+      fetchCategory();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Category Type Added'),
       ));

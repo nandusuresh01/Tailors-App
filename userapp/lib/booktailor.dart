@@ -26,7 +26,7 @@ class _BookTailorState extends State<BookTailor> {
       final booking = await supabase
           .from('tbl_booking')
           .select(
-              "id,status, tbl_dress(*,tbl_material(material_amount,material_photo,material_colors,tbl_clothtype(clothtype_name)),tbl_measurement(*,tbl_attribute(attribute_name)),tbl_category(category_name))")
+              "id, status, tbl_dress(*, tbl_material(material_amount, material_photo, material_colors, tbl_clothtype(clothtype_name)), tbl_measurement(*, tbl_attribute(attribute_name)), tbl_category(category_name))")
           .eq('tailor_id', widget.id)
           .eq('user_id', supabase.auth.currentUser!.id)
           .eq('status', 0)
@@ -63,7 +63,7 @@ class _BookTailorState extends State<BookTailor> {
       final booking = await supabase
           .from('tbl_booking')
           .select(
-              "id,status, tbl_dress(*,tbl_material(material_amount,material_photo,material_colors,tbl_clothtype(clothtype_name)),tbl_measurement(*,tbl_attribute(attribute_name)),tbl_category(category_name))")
+              "id, status, tbl_dress(*, tbl_material(material_amount, material_photo, material_colors, tbl_clothtype(clothtype_name)), tbl_measurement(*, tbl_attribute(attribute_name)), tbl_category(category_name))")
           .eq('id', widget.id)
           .maybeSingle()
           .limit(1);
@@ -102,8 +102,16 @@ class _BookTailorState extends State<BookTailor> {
   double calculateTotalCost() {
     return dressData.fold(
       0.0,
-      (sum, dress) =>
-          sum + (dress['tbl_material']['material_amount'] as num).toDouble(),
+      (sum, dress) {
+        final material = dress['tbl_material'];
+        if (material == null) return sum; // No material, cost is 0
+        final materialAmount = material['material_amount'];
+        // Parse material_amount as a String to double
+        return sum +
+            (materialAmount != null
+                ? double.tryParse(materialAmount.toString()) ?? 0.0
+                : 0.0);
+      },
     );
   }
 
@@ -120,9 +128,11 @@ class _BookTailorState extends State<BookTailor> {
   }
 
   // Delete a Dress
-  Future<void> deleteDress(String dressId) async {
+  Future<void> deleteDress(int dressId) async {
     try {
+      // First, attempt to delete measurements (if any)
       await supabase.from('tbl_measurement').delete().eq('dress_id', dressId);
+      // Then delete the dress
       await supabase.from('tbl_dress').delete().eq('dress_id', dressId);
       await fetchBooking(); // Refresh the list
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +145,7 @@ class _BookTailorState extends State<BookTailor> {
       print("Error deleting dress: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Failed to delete dress."),
+          content: const Text("Failed to delete dress. Please try again."),
           backgroundColor: Colors.red,
         ),
       );
@@ -153,8 +163,21 @@ class _BookTailorState extends State<BookTailor> {
         ),
       ),
     );
-    if (result == true) {
+    if (result != null && result['success'] == true) {
       await fetchBooking(); // Refresh the list after editing
+    }
+  }
+
+  // Add a New Dress
+  Future<void> addDress() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SelectMaterial(tailor: widget.id),
+      ),
+    );
+    if (result != null && result['success'] == true) {
+      await fetchBooking(); // Refresh the list after adding
     }
   }
 
@@ -232,6 +255,16 @@ class _BookTailorState extends State<BookTailor> {
   }
 
   Future<void> checkOut() async {
+    if (dressData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Please add at least one dress to proceed."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       setState(() {
         isLoading = true;
@@ -263,7 +296,7 @@ class _BookTailorState extends State<BookTailor> {
   @override
   void initState() {
     super.initState();
-    if(widget.booking) {
+    if (widget.booking) {
       fetchfromBooking();
     } else {
       fetchBooking();
@@ -272,6 +305,8 @@ class _BookTailorState extends State<BookTailor> {
 
   @override
   Widget build(BuildContext context) {
+    final totalMaterialCost = calculateTotalCost();
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -283,17 +318,7 @@ class _BookTailorState extends State<BookTailor> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: OutlinedButton.icon(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SelectMaterial(tailor: widget.id),
-                  ),
-                );
-                if (result == true) {
-                  await fetchBooking();
-                }
-              },
+              onPressed: addDress,
               icon: Icon(Icons.checkroom, color: Colors.white),
               label: const Text(
                 "Select Cloth",
@@ -335,17 +360,24 @@ class _BookTailorState extends State<BookTailor> {
                         final measurements =
                             dress['tbl_measurement'] as List<dynamic>;
                         final material = dress['tbl_material'];
-                        final colors = (material['material_colors'] as List?)
-                                ?.map((c) => c as Map<String, dynamic>)
-                                .toList() ??
-                            [];
+                        final colors = (material != null &&
+                                material['material_colors'] != null)
+                            ? (material['material_colors'] as List)
+                                .map((c) => c as Map<String, dynamic>)
+                                .toList()
+                            : [];
                         String category =
                             dress['tbl_category']['category_name'];
                         String remark = dress['dress_remark'] ?? "No remarks";
                         double fabricLength =
                             calculateFabricLength(measurements);
-                        double materialCost =
-                            (material['material_amount'] as num).toDouble();
+                        double materialCost = material != null
+                            ? (material['material_amount'] != null
+                                ? double.tryParse(
+                                        material['material_amount'].toString()) ??
+                                    0.0
+                                : 0.0)
+                            : 0.0;
 
                         return Card(
                           elevation: 4,
@@ -443,7 +475,8 @@ class _BookTailorState extends State<BookTailor> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: material['material_photo'] != null
+                                      child: material != null &&
+                                              material['material_photo'] != null
                                           ? Image.network(
                                               material['material_photo'],
                                               width: 80,
@@ -475,23 +508,39 @@ class _BookTailorState extends State<BookTailor> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            material['tbl_clothtype']
-                                                ['clothtype_name'],
+                                            material != null
+                                                ? material['tbl_clothtype']
+                                                        ['clothtype_name'] ??
+                                                    "Custom Material"
+                                                : "Custom Material",
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                               color: primaryColor,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Total Cost: ₹${materialCost.toStringAsFixed(2)}",
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: accentColor,
+                                          if (material == null) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "User-provided material",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
-                                          ),
+                                          ],
+                                          if (materialCost > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "Total Cost: ₹${materialCost.toStringAsFixed(2)}",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: accentColor,
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 4),
                                           Text(
                                             "Fabric Length: ${fabricLength.toStringAsFixed(1)} meters",
@@ -596,45 +645,47 @@ class _BookTailorState extends State<BookTailor> {
                     ),
               // Total Cost, Remark, and Checkout Button at Bottom
               if (dressData.isNotEmpty) ...[
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Total Material Cost",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
+                if (totalMaterialCost > 0) ...[
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Total Material Cost",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "₹${calculateTotalCost().toStringAsFixed(2)}",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: accentColor,
+                          Text(
+                            "₹${totalMaterialCost.toStringAsFixed(2)}",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Note: This is only the material cost; service cost will be added later.",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
+                  const SizedBox(height: 8),
+                  Text(
+                    "Note: This is only the material cost; service cost will be added later.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,

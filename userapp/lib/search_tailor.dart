@@ -22,14 +22,13 @@ class _SearchTailorState extends State<SearchTailor> {
     });
 
     try {
-      // Fetch tailors with their average rating from tbl_rating
+      // Fetch tailors with their average rating and services
       final response = await supabase
           .from('tbl_tailor')
           .select('''
             *,
-            avg_rating: tbl_rating!tailor_id(
-              rating_count
-            )
+            avg_rating: tbl_rating!tailor_id(rating_count),
+            services: tbl_service!tailor_id(*, tbl_category!inner(category_name))
           ''')
           .eq('tailor_status', 1);
 
@@ -46,9 +45,16 @@ class _SearchTailorState extends State<SearchTailor> {
                       sum + (rating['rating_count'] as num).toDouble());
               averageRating = totalRating / ratings.length;
             }
+
+            // Extract service names
+            final services = (tailor['services'] as List<dynamic>? ?? [])
+                .map((service) => service['tbl_category']['category_name'] as String)
+                .toList();
+
             return {
               ...tailor,
               'average_rating': averageRating,
+              'service_names': services, // Add service names to tailor data
             };
           }).toList();
           filteredTailors = tailors;
@@ -277,8 +283,8 @@ class _SearchTailorState extends State<SearchTailor> {
               itemCount: filteredTailors.length,
               itemBuilder: (context, index) {
                 final data = filteredTailors[index];
-                // Use the fetched average rating, default to 0.0 if null
                 final rating = (data['average_rating'] as double?)?.clamp(0.0, 5.0) ?? 0.0;
+                final serviceNames = data['service_names'] as List<String>;
 
                 return GestureDetector(
                   onTap: () {
@@ -429,6 +435,47 @@ class _SearchTailorState extends State<SearchTailor> {
                                           style: TextStyle(
                                             color: Colors.grey.shade600,
                                             fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 4),
+                                    // Services
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.category,
+                                          color: primaryColor,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Expanded(
+                                          child: Wrap(
+                                            spacing: 4,
+                                            runSpacing: 4,
+                                            children: serviceNames.isNotEmpty
+                                                ? serviceNames
+                                                    .map((service) => Chip(
+                                                          label: Text(
+                                                            service,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: primaryColor,
+                                                            ),
+                                                          ),
+                                                          backgroundColor: primaryColor.withOpacity(0.1),
+                                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                                        ))
+                                                    .toList()
+                                                : [
+                                                    Text(
+                                                      "No services listed",
+                                                      style: TextStyle(
+                                                        color: Colors.grey.shade600,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
                                           ),
                                         ),
                                       ],

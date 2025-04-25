@@ -7,6 +7,7 @@ import 'package:project/manage_category.dart';
 import 'package:project/manage_clothtype.dart';
 import 'package:project/manage_complaint.dart';
 import 'package:project/manage_district.dart';
+import 'package:project/manage_login.dart';
 import 'package:project/manage_place.dart';
 import 'package:project/manage_tailors.dart';
 import 'package:project/profilepage.dart';
@@ -77,12 +78,14 @@ class _TailState extends State<Tail> {
 
       setState(() {
         yearlyEarnings = spots;
-        maxY = maxAmount + (maxAmount * 0.1); // Add 10% padding to max value
+        maxY = maxAmount > 0 ? maxAmount + (maxAmount * 0.1) : 1000; // Default maxY if no data
         isLoadingGraph = false;
       });
     } catch (e) {
       print("Error fetching yearly earnings: $e");
       setState(() {
+        yearlyEarnings = List.generate(12, (index) => FlSpot(index.toDouble(), 0));
+        maxY = 1000; // Default maxY for error case
         isLoadingGraph = false;
       });
     }
@@ -97,16 +100,28 @@ class _TailState extends State<Tail> {
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       actions: [
-        IconButton(
-          icon: CircleAvatar(
+        PopupMenuButton(
+          child: CircleAvatar(
             backgroundColor: Colors.blueGrey[900],
             child: const Icon(Icons.person, color: Colors.white, size: 20),
           ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfileScreen()),
-            );
+          itemBuilder: (context) {
+            return [
+              PopupMenuItem(
+                child: ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text('Logout'),
+                  onTap: () {
+                    supabase.auth.signOut();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => ManageLogin()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ];
           },
         ),
         const SizedBox(width: 16),
@@ -175,7 +190,7 @@ class _TailState extends State<Tail> {
               const SizedBox(height: 30),
               _buildStatsSection(),
               const SizedBox(height: 30),
-              _buildSalesGraph(), // New sales graph section
+              _buildSalesGraph(),
             ],
           ),
         ),
@@ -259,11 +274,11 @@ class _TailState extends State<Tail> {
             _buildStatCard('New Complaints', complaintsCount.toString(), Icons.warning, Colors.orange),
             const SizedBox(width: 16),
             _buildStatCard(
-          'Total Revenue (${DateTime.now().year})',
-          NumberFormat.currency(symbol: '₹').format(totalRevenue),
-          Icons.monetization_on,
-          Colors.purple,
-        ),
+              'Total Revenue (${DateTime.now().year})',
+              NumberFormat.currency(symbol: '₹').format(totalRevenue),
+              Icons.monetization_on,
+              Colors.purple,
+            ),
           ],
         );
       },
@@ -404,96 +419,116 @@ class _TailState extends State<Tail> {
           Expanded(
             child: isLoadingGraph
                 ? const Center(child: CircularProgressIndicator())
-                : LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: true,
-                        horizontalInterval: maxY / 5,
-                        verticalInterval: 1,
-                      ),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
+                : yearlyEarnings.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No sales data available. Add bookings to see the graph!',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          axisNameSize: 30, // Increase space for labels
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 1,
-                            getTitlesWidget: (value, meta) {
-                              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                              final int index = value.toInt();
-                              if (index >= 0 && index < months.length) {
-                                return SideTitleWidget(
-                                  meta: meta,
-                                  space: 5, // Spacing between label and chart
-                                  child: Text(
-                                    months[index],
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return const Text('');
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: maxY / 5,
-                            reservedSize: 60,
-                            getTitlesWidget: (value, meta) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Text(
-                                  NumberFormat.currency(
-                                    symbol: '₹',
-                                    decimalDigits: 0,
-                                  ).format(value),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(
-                        show: true,
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      minX: 0,
-                      maxX: 11,
-                      minY: 0,
-                      maxY: maxY,
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: yearlyEarnings,
-                          isCurved: true,
-                          color: Colors.blue,
-                          barWidth: 3,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: true),
-                          belowBarData: BarAreaData(
+                      )
+                    : LineChart(
+                        LineChartData(
+                          gridData: FlGridData(
                             show: true,
-                            color: Colors.blue.withOpacity(0.1),
+                            drawVerticalLine: true,
+                            horizontalInterval: maxY > 0 ? maxY / 5 : 200, // Default interval if maxY is 0
+                            verticalInterval: 1,
                           ),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            bottomTitles: AxisTitles(
+                              axisNameSize: 30,
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                interval: 1,
+                                getTitlesWidget: (value, meta) {
+                                  const months = [
+                                    'Jan',
+                                    'Feb',
+                                    'Mar',
+                                    'Apr',
+                                    'May',
+                                    'Jun',
+                                    'Jul',
+                                    'Aug',
+                                    'Sep',
+                                    'Oct',
+                                    'Nov',
+                                    'Dec'
+                                  ];
+                                  final int index = value.toInt();
+                                  if (index >= 0 && index < months.length) {
+                                    return SideTitleWidget(
+                                      meta: meta,
+                                      space: 5,
+                                      child: Text(
+                                        months[index],
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const Text('');
+                                },
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                interval: maxY > 0 ? maxY / 5 : 200,
+                                reservedSize: 60,
+                                getTitlesWidget: (value, meta) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Text(
+                                      NumberFormat.currency(
+                                        symbol: '₹',
+                                        decimalDigits: 0,
+                                      ).format(value),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          borderData: FlBorderData(
+                            show: true,
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          minX: 0,
+                          maxX: 11,
+                          minY: 0,
+                          maxY: maxY > 0 ? maxY : 1000, // Default maxY if no data
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: yearlyEarnings,
+                              isCurved: true,
+                              color: Colors.blue,
+                              barWidth: 3,
+                              isStrokeCapRound: true,
+                              dotData: FlDotData(show: true),
+                              belowBarData: BarAreaData(
+                                show: true,
+                                color: Colors.blue.withOpacity(0.1),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
           ),
         ],
       ),

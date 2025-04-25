@@ -15,6 +15,7 @@ class Homescreen extends StatefulWidget {
 class _HomescreenState extends State<Homescreen> {
   final primaryColor = const Color(0xFF6A1B9A); // Deep purple to match login theme
   String userName = "";
+  String image = "";
 
   @override
   void initState() {
@@ -26,11 +27,12 @@ class _HomescreenState extends State<Homescreen> {
     try {
       final user = await supabase
           .from('tbl_user')
-          .select('user_name')
+          .select('user_name,user_photo')
           .eq('user_id', supabase.auth.currentUser!.id)
           .single();
       setState(() {
         userName = user['user_name'];
+        image = user['user_photo'];
       });
     } catch (e) {
       print('Error loading user name: $e');
@@ -84,11 +86,19 @@ class _HomescreenState extends State<Homescreen> {
                             width: 2,
                           ),
                         ),
-                        child: const CircleAvatar(
+                        child: image!="" ? CircleAvatar(
                           radius: 24,
                           backgroundColor: Colors.white,
                           backgroundImage: NetworkImage(
-                            'https://cdn.dribbble.com/userupload/4154378/file/original-64ea0b52830b08ec31aef276115d1158.png?resize=400x0',
+                            image,
+                          ),
+                        ) : CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            Icons.person,
+                            color: primaryColor,
+                            size: 32,
                           ),
                         ),
                       ),
@@ -159,64 +169,77 @@ class _HomescreenState extends State<Homescreen> {
 
             // Promotional Banner
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+  child: Padding(
+    padding: const EdgeInsets.all(20.0),
+    child: Container(
+      height: 200,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: const AssetImage('assets/image.jpg'),
+          fit: BoxFit.cover,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Transform.rotate(
+                  angle: -0.1, // Slight tilt for a funky look
+                  child: Text(
+                    'Stitch Pro!',
+                    style: TextStyle(
+                      color: Colors.yellowAccent.withOpacity(0.9),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(2, 2),
+                          blurRadius: 4,
+                        ),
+                      ],
+                      letterSpacing: 2,
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            bottomRight: Radius.circular(20),
-                          ),
-                          child: Image.asset(
-                            'assets/tailor.jpg',
-                            height: 120,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox(),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Special Offer!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '20% off on your first order',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                Transform.scale(
+                  scale: 1.1, // Slight zoom effect
+                  child: Text(
+                    'Find & Book Epic Tailors!',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      foreground: Paint()
+                        ..color = Colors.pinkAccent
+                        ..style = PaintingStyle.fill,
+                      background: Paint()
+                        ..color = Colors.purple.withOpacity(0.3)
+                        ..style = PaintingStyle.stroke
+                        ..strokeWidth = 2,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    ),
+  ),
+),
           ],
         ),
       ),

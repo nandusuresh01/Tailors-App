@@ -32,7 +32,10 @@ class _ManageDistrictState extends State<ManageDistrict> {
 
   Future<void> deleteDistrict(int id) async {
     try {
-      await supabase.from('tbl_district').delete().match({'id': id});
+      await supabase.from('tbl_district').delete().eq('district_id', id);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('District Deleted'),
+      ));
       fetchdistrict();
     } catch (e) {
       print("Error: $e");
@@ -132,7 +135,7 @@ class _ManageDistrictState extends State<ManageDistrict> {
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () {
-                                deleteDistrict(data['id']);
+                                deleteDistrict(data['district_id']);
                               },
                             ),
                           ],

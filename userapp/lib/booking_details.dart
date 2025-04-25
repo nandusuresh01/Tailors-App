@@ -67,9 +67,10 @@ class _BookingDetailsState extends State<BookingDetails> {
   }
 
   double calculateDressMaterialCost(Map<String, dynamic> dress) {
+    final material = dress['tbl_material'];
+    if (material == null || material['material_amount'] == null) return 0.0; // Default to 0 if material_amount is null
+    final materialCostPerMeter = (material['material_amount'] as num).toDouble();
     final measurements = dress['tbl_measurement'] as List<dynamic>;
-    final materialCostPerMeter =
-        (dress['tbl_material']['material_amount'] as num).toDouble();
     final fabricLength = calculateFabricLength(measurements);
     return materialCostPerMeter * fabricLength;
   }
@@ -86,7 +87,7 @@ class _BookingDetailsState extends State<BookingDetails> {
     }
     return dressData.fold(
       0.0,
-      (sum, dress) => sum + calculateDressMaterialCost(dress),
+      (sum, dress) => sum + getDressCost(dress),
     );
   }
 
@@ -157,8 +158,7 @@ class _BookingDetailsState extends State<BookingDetails> {
         'payment_rzid': response.paymentId,
         'payment_date': DateTime.now().toIso8601String(),
         'payment_amount': calculateTotalCost(),
-        'booking_id':
-            widget.booking, // Add booking_id to link payment to booking
+        'booking_id': widget.booking, // Add booking_id to link payment to booking
       };
 
       await supabase.from('tbl_payment').insert(paymentData);
@@ -262,8 +262,7 @@ class _BookingDetailsState extends State<BookingDetails> {
 
     var options = {
       'key': 'rzp_test_565dkZaITtTfYu',
-      'amount':
-          (calculateTotalCost() * 100).toInt(), // Use calculated total in paise
+      'amount': (calculateTotalCost() * 100).toInt(), // Use calculated total in paise
       'name': 'Tailor App',
       'description': 'Payment for Booking #${widget.booking}',
       'prefill': {
@@ -448,120 +447,119 @@ class _BookingDetailsState extends State<BookingDetails> {
   }
 
   void showRatingDialog() {
-  double rating = 0.0;
-  TextEditingController feedbackController = TextEditingController();
+    double rating = 0.0;
+    TextEditingController feedbackController = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          "Rate Your Experience",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: primaryColor,
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        content: StatefulBuilder(
-          builder: (BuildContext context, StateSetter setDialogState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    return IconButton(
-                      icon: Icon(
-                        index < rating ? Icons.star : Icons.star_border,
-                        color: index < rating ? Colors.amber : Colors.grey,
-                        size: 40,
-                      ),
-                      onPressed: () {
-                        setDialogState(() {
-                          rating = (index + 1).toDouble();
-                        });
-                      },
-                    );
-                  }),
-                ),
-                
-                const SizedBox(height: 16),
-                TextField(
-                  controller: feedbackController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: "Add Feedback (Optional)",
-                    labelStyle: TextStyle(color: primaryColor),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "Cancel",
-              style: TextStyle(color: accentColor, fontSize: 16),
+          title: Text(
+            "Rate Your Experience",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
             ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (rating > 0) {
-                try {
-                  await supabase.from('tbl_rating').insert({
-                    'tailor_id': bookingData!['tailor_id'],
-                    'rating_count': rating,
-                    'rating_content': feedbackController.text,
-                  });
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setDialogState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < rating ? Icons.star : Icons.star_border,
+                          color: index < rating ? Colors.amber : Colors.grey,
+                          size: 40,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            rating = (index + 1).toDouble();
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: feedbackController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: "Add Feedback (Optional)",
+                      labelStyle: TextStyle(color: primaryColor),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: accentColor, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (rating > 0) {
+                  try {
+                    await supabase.from('tbl_rating').insert({
+                      'tailor_id': bookingData!['tailor_id'],
+                      'rating_count': rating,
+                      'rating_content': feedbackController.text,
+                    });
+                    Fluttertoast.showToast(
+                      msg: "Rating submitted successfully!",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      backgroundColor: primaryColor,
+                      textColor: Colors.white,
+                    );
+                    Navigator.pop(context);
+                  } catch (e) {
+                    Fluttertoast.showToast(
+                      msg: "Failed to submit rating: $e",
+                      toastLength: Toast.LENGTH_LONG,
+                      gravity: ToastGravity.BOTTOM,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                    );
+                  }
+                } else {
                   Fluttertoast.showToast(
-                    msg: "Rating submitted successfully!",
+                    msg: "Please provide a rating.",
                     toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    backgroundColor: primaryColor,
-                    textColor: Colors.white,
-                  );
-                  Navigator.pop(context);
-                } catch (e) {
-                  Fluttertoast.showToast(
-                    msg: "Failed to submit rating: $e",
-                    toastLength: Toast.LENGTH_LONG,
                     gravity: ToastGravity.BOTTOM,
                     backgroundColor: Colors.red,
                     textColor: Colors.white,
                   );
                 }
-              } else {
-                Fluttertoast.showToast(
-                  msg: "Please provide a rating.",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  backgroundColor: Colors.red,
-                  textColor: Colors.white,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              child: const Text("Submit"),
             ),
-            child: const Text("Submit"),
-          ),
-        ],
-      );
-    },
-  );
-}
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -638,12 +636,14 @@ class _BookingDetailsState extends State<BookingDetails> {
                         final measurements =
                             dress['tbl_measurement'] as List<dynamic>;
                         final material = dress['tbl_material'];
-                        final colors = (material['material_colors'] as List?)
-                                ?.map((c) => c as Map<String, dynamic>)
-                                .toList() ??
-                            [];
-                        String category =
-                            dress['tbl_category']['category_name'];
+                        // Handle null material case for colors
+                        final colors = (material != null &&
+                                material['material_colors'] != null)
+                            ? (material['material_colors'] as List)
+                                .map((c) => c as Map<String, dynamic>)
+                                .toList()
+                            : [];
+                        String category = dress['tbl_category']['category_name'];
                         String remark = dress['dress_remark'] ?? "No remarks";
                         double fabricLength =
                             calculateFabricLength(measurements);
@@ -698,7 +698,8 @@ class _BookingDetailsState extends State<BookingDetails> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: material['material_photo'] != null
+                                      child: material != null &&
+                                              material['material_photo'] != null
                                           ? Image.network(
                                               material['material_photo'],
                                               width: 80,
@@ -730,23 +731,39 @@ class _BookingDetailsState extends State<BookingDetails> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            material['tbl_clothtype']
-                                                ['clothtype_name'],
+                                            material != null
+                                                ? material['tbl_clothtype']
+                                                        ['clothtype_name'] ??
+                                                    "Custom Material"
+                                                : "Custom Material",
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                               color: primaryColor,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Cost: ₹${cost.toStringAsFixed(2)}",
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: accentColor,
+                                          if (material == null) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "User-provided material",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
-                                          ),
+                                          ],
+                                          if (cost > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "Cost: ₹${cost.toStringAsFixed(2)}",
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: accentColor,
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 4),
                                           Text(
                                             "Fabric Length: ${fabricLength.toStringAsFixed(1)} meters",
@@ -762,8 +779,7 @@ class _BookingDetailsState extends State<BookingDetails> {
                                               runSpacing: 4,
                                               children: colors.map((color) {
                                                 return Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
                                                     Container(
                                                       width: 12,
